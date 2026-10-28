@@ -3,13 +3,14 @@ import { boxSlotList, filamentName, loadedIdx, toolheadHasFilament } from '../co
 import { hexOf, slotLabel } from '../core/format';
 import { MoonrakerService } from '../core/moonraker.service';
 import { Card } from '../shared/card';
+import { DryerControl } from './dryer-control';
 import { SlotCard, SlotView } from './slot-card';
 
 /** QIDI Box: temperature, humidity, what's in the toolhead, and the slot editor. */
 @Component({
   selector: 'app-box-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Card, SlotCard],
+  imports: [Card, SlotCard, DryerControl],
   template: `
     <app-card cardId="box" title="Control Box" [info]="headInfo()">
       <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" /><circle cx="7" cy="12.5" r="2.5" /><circle cx="17" cy="12.5" r="2.5" /><path d="M12 6v13" /></svg>
@@ -35,7 +36,8 @@ import { SlotCard, SlotView } from './slot-card';
           <app-slot-card [view]="s" />
         }
       </div>
-      <p class="muted" style="font-size:12px;margin:12px 0 0">Saved with the <code>SET_SLOT_FILAMENT</code> macro (same data the touchscreen uses). Editing is paused while printing.</p>
+      @if (box()) { <app-dryer-control [boxNo]="1" /> }
+      <p class="muted" style="font-size:12px;margin:12px 0 0">Slot changes are saved with the <code>SET_SLOT_FILAMENT</code> macro (same data the touchscreen uses). Editing is paused while printing.</p>
     </app-card>
   `,
 })
@@ -59,7 +61,7 @@ export class BoxPanel {
     if (!b) return '';
     const li = this.li();
     const l = li == null ? (this.noFilament() ? ' · Nothing loaded' : '') : li === 16 ? ' · External loaded' : ` · ${slotLabel(li)} loaded`;
-    return `${b.aht20_humidity ?? '–'}% RH${l}`;
+    return `${b.aht20_humidity ?? '–'}% RH${b.dry_state ? ' · Drying' : ''}${l}`;
   });
 
   protected readonly slots = computed<SlotView[]>(() => {

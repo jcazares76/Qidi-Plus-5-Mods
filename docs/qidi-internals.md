@@ -74,10 +74,32 @@ the slot mapped to the first tool.
 | `heater_generic heater_box1` | QIDI Box dryer (245 W), controlled by the box's AHT20 air sensor, target up to 90 °C |
 | `temperature_sensor heater_temp_a_box1` / `_b_box1` | probes on the box's two heater + fan units, `max_temp` 130 °C |
 
+## Box filament dryer
+
+Not documented by QIDI; worked out by testing (the box code is compiled):
+
+```
+BOX_START_DRYING BOX=1 TEMP=45 TIME=6     ; box number (1-based), °C, hours
+BOX_STOP_DRYING BOX=1
+```
+
+- Without all parameters the box replies `// Error: Missing parameters.` (as a console message – the command
+  itself still returns OK). On success: `// BOX_DRY started for BOX 1` / `// DISABLE_BOX_DRY for BOX 1`.
+  Stopping when idle replies `// No active heating for BOX 1`.
+- While drying, `box_extras.boxes[b]` shows `dry_state: 1`, `box_target_temp`, and `end_time` = **minutes left**;
+  `heater_generic heater_box1` gets the target.
+- QIDI's wiki: unload all filament from the feeder first, close the lid, trays rotate every 5 minutes, box fans
+  start above 35 °C. Spec maximum 65 °C.
+- Per-filament limit: `box_extras.boxes[b].filament_info[i].box_max_temp` (e.g. ABS/ASA 45). PLA reports `0` –
+  QIDI disables *manual* box heating for PLA.
+- Related commands (not used here): `EX_START_DRYING` / `EX_STOP_DRYING` dry spools in the printer chamber
+  with the bed and chamber heaters (presets in `drying.conf`); `SET_BOX_TEMP_CONTROL`, `BOX_TEMP_SET`,
+  `DISABLE_BOX_HEATER` set box temperature during a print.
+
 ## Other QIDI G-code commands seen
 
 `UPDATE_FILAMENT_INFORMATION`, `READ_RFID`, `INIT_RFID_READ`, `LOAD_FILAMENT_CONTROL`, `UNLOAD_FILAMENT_CONTROL`,
-`BOX_START_DRYING`, `BOX_PRINT_START`, `ENABLE_SMART_PIN`, `NEOPIXEL_MODE`. Parameters weren't needed here.
+`BOX_PRINT_START`, `ENABLE_SMART_PIN`, `NEOPIXEL_MODE`. Parameters weren't needed here.
 
 ## Gotchas
 

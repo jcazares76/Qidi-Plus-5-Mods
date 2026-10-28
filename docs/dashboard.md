@@ -43,6 +43,11 @@ All panels collapse; the open/closed state is remembered (except Camera).
   **in the toolhead**. Slot cards show "Spool in" / "Empty" from the spool sensor and "In toolhead" for the
   loaded slot. Edit filament and color per slot (and the external spool); saving uses `SET_SLOT_FILAMENT`
   and is blocked while printing.
+  - **Filament dryer** (Angular version): start drying with a temperature (30–65 °C) and time (1–24 h), see
+    the target, box air temperature and time left, and stop it. The temperature defaults to the lowest QIDI
+    drying limit among the loaded spools, and it warns when the setting is above a spool's limit (PLA is treated
+    as 45 °C). Start is disabled while printing and while filament is in the toolhead – QIDI requires unloading
+    first. Uses `BOX_START_DRYING` / `BOX_STOP_DRYING` (see [qidi-internals.md](qidi-internals.md#box-filament-dryer)).
 - **Camera** – closed on every page load. The MJPEG stream only runs while the panel is open **and** the
   browser tab is visible, to keep load off the printer.
 - **Console** – recent history, live replies, ↑/↓ command history. Automatic light/screen/LED status chatter is
