@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QIDI Plus 5 Dashboard</title>
+<style>
+  :root {
+    --bg: #121212; --card: #1e1e1e; --head: #262626; --line: #333; --field: #181818;
+    --text: #e6e6e6; --muted: #9a9a9a; --accent: #2196f3; --accent-text: #fff;
+    --ok: #4caf50; --warn: #ff9800; --err: #f44336;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+
+  /* App bar */
+  .appbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; background: #1a1a1a; border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 600; font-size: 17px; }
+  .brand small { color: var(--muted); font-weight: 400; margin-left: 6px; font-size: 13px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 999px;
+    background: var(--head); font-size: 12px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.err { background: var(--err); }
+  .spacer { flex: 1; }
+  .host { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+  .host input { width: 130px; }
+
+  .banner { margin: 12px 16px 0; padding: 10px 14px; border-radius: 6px; border-left: 4px solid var(--warn);
+    background: var(--card); display: none; }
+  .banner.show { display: block; } .banner.err { border-left-color: var(--err); }
+
+  /* Dashboard */
+  .dash { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; padding: 14px 16px 40px;
+    max-width: 1500px; margin: 0 auto; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  @media (max-width: 1000px) { .dash { grid-template-columns: minmax(0, 1fr); } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .card > header { display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px; height: 44px;
+    background: var(--head); cursor: pointer; user-select: none; }
+  .card > header svg.ic { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
+  .card > header h2 { font-size: 15px; font-weight: 500; margin: 0; }
+  .card > header .hinfo { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .card > header .tog { margin-left: auto; width: 32px; height: 32px; border: 0; background: none; border-radius: 50%;
+    color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  .card > header .tog:hover { background: #ffffff10; }
+  .card > header .tog svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform .15s; }
+  .card.closed > header .tog svg { transform: rotate(180deg); }
+  .card.closed > .body { display: none; }
+  .body { padding: 14px; }
+
+  /* Controls */
+  input[type=text], input[type=number], select { background: var(--field); border: 1px solid var(--line);
+    border-radius: 4px; padding: 6px 8px; min-width: 0; }
+  button.btn { border: 1px solid var(--line); background: #2c2c2c; border-radius: 4px; padding: 7px 14px; cursor: pointer;
+    text-transform: uppercase; font-size: 12px; font-weight: 600; letter-spacing: .05em; }
+  button.btn:hover:not(:disabled) { background: #363636; }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.btn.danger { color: var(--err); }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  .muted { color: var(--muted); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: -14px -14px 12px; padding: 0 8px; }
+  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer;
+    color: var(--muted); text-transform: uppercase; font-size: 12px; font-weight: 600; letter-spacing: .05em; }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.act { border-radius: 4px; transition: background-color .3s; }
+  tr.totrow th { border-bottom: 0; padding-bottom: 0; }
+  .totw { display: inline-block; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--text);
+    background: #2a2a2a; border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; cursor: help; }
+  .totw small { color: var(--muted); font-weight: 400; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; }
+  td.pbar { color: #fff; border-radius: 4px; text-shadow: 0 0 3px #000; }
+  td.t-cool { background: #2196f340; color: #bbdefb; }
+  td.t-ok { background: #4caf5040; color: #c8e6c9; }
+  td.t-hot { background: #f4433640; color: #ffcdd2; }
+
+  /* Ready */
+  .job { display: flex; gap: 14px; align-items: center; }
+  .thumb { width: 72px; height: 72px; border-radius: 4px; background: #111 center/contain no-repeat; flex: none; border: 1px solid var(--line); }
+  .job .fname { font-weight: 500; word-break: break-word; }
+  .bar { height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px 14px; margin-top: 14px; }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat .v { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .ready-actions { margin-top: 14px; }
+
+  /* Thermals */
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: 0; }
+  canvas.chart { width: 100%; height: 190px; display: block; cursor: crosshair; touch-action: pan-y; }
+  .chartwrap { position: relative; margin-top: 12px; }
+  .ctip { position: absolute; top: 4px; pointer-events: none; background: #000d; border: 1px solid var(--line);
+    border-radius: 4px; padding: 6px 8px; font-size: 12px; white-space: nowrap; display: none; z-index: 2; }
+  .ctip .tt { color: var(--muted); margin-bottom: 3px; }
+  .ctip .tr { display: flex; align-items: center; gap: 6px; }
+  .ctip .tr b { font-weight: 500; margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
+  .ctip .tr i { font-style: normal; color: var(--muted); font-size: 11px; }
+
+  /* Fans */
+  .fan { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) 64px; gap: 10px; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .fan:last-child { border-bottom: 0; }
+  .fan .val { text-align: right; font-variant-numeric: tabular-nums; }
+  .fan input[type=range] { width: 100%; accent-color: var(--accent); }
+  .fan .ro { height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+  .fan .ro > div { height: 100%; background: var(--muted); }
+  .switch { position: relative; display: inline-block; vertical-align: middle; width: 38px; height: 20px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .switch input:disabled + span { opacity: .4; cursor: not-allowed; }
+  .fan.pinrow { grid-template-columns: minmax(0, 1fr) auto; }
+  .switch span { position: absolute; inset: 0; background: #444; border-radius: 999px; cursor: pointer; transition: .15s; }
+  .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: #ddd;
+    border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(18px); background: #fff; }
+  .subhead { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 2px; }
+  .subhead:first-child { margin-top: 0; }
+
+  /* Control box */
+  .boxinfo { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .boxinfo b { color: var(--text); font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .slot { background: #232323; border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .slot.dirty { border-color: var(--accent); }
+  .slot .top { display: flex; gap: 12px; align-items: center; }
+  .spool { width: 46px; height: 46px; border-radius: 50%; flex: none; position: relative; border: 1px solid #ffffff30; }
+  .spool::after { content: ""; position: absolute; inset: 34%; border-radius: 50%; background: #232323; border: 1px solid #ffffff30; }
+  .slotno { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+  .slot .name { font-weight: 500; }
+  .slot .meta { font-size: 12px; color: var(--muted); }
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 0 6px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: 1px; }
+  .badge.in { color: var(--ok); border-color: currentColor; }
+  .badge.load { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .slot.loaded { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .slot.empty .spool { opacity: .3; } .slot.empty .name { color: var(--muted); }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  label.f select { color: var(--text); }
+  .colorrow { display: flex; gap: 6px; align-items: center; }
+  .colorrow input[type=color] { width: 38px; height: 32px; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--field); flex: none; }
+  .colorrow input[type=text] { flex: 1; font-family: ui-monospace, Consolas, monospace; text-transform: uppercase; }
+  .presets { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+  .presets button { padding: 0; aspect-ratio: 1; border-radius: 3px; border: 1px solid #ffffff40; cursor: pointer; }
+  .slot .actions { display: flex; gap: 6px; } .slot .actions .primary { flex: 1; }
+  .msg { font-size: 12px; min-height: 1em; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--err); }
+
+  /* Camera */
+  .cam { background: #000; border-radius: 4px; aspect-ratio: 4 / 3; display: grid; place-items: center; overflow: hidden; }
+  .cam img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+  /* Console */
+  .log { height: 300px; overflow-y: auto; background: #151515; border: 1px solid var(--line); border-radius: 4px;
+    padding: 8px 10px; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+  .log .cmd { color: var(--accent); } .log .err { color: var(--err); } .log .info { color: #bdbdbd; }
+  .log .t { color: #666; margin-right: 8px; }
+  .cin { display: flex; gap: 8px; margin-top: 8px; } .cin input { flex: 1; font-family: ui-monospace, Consolas, monospace; }
+
+  /* Jobs */
+  .files td .fthumb { width: 40px; height: 40px; border-radius: 3px; background: #111 center/contain no-repeat; border: 1px solid var(--line); }
+  .files td { vertical-align: middle; }
+  #tabFiles, #tabHistory { max-height: 460px; overflow-y: auto; }
+  .files .fn { word-break: break-word; }
+  .st { font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .st.completed { color: var(--ok); } .st.cancelled, .st.error, .st.klippy_shutdown { color: var(--err); } .st.in_progress { color: var(--accent); }
+
+  dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 0;
+    width: min(560px, calc(100vw - 32px)); }
+  dialog::backdrop { background: #000a; }
+  dialog header { padding: 14px 16px; background: var(--head); font-weight: 500; word-break: break-word; }
+  dialog .dbody { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  dialog footer { padding: 12px 16px; display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--line); }
+  .map { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; }
+  .map .tool { display: flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+  .warnline { color: var(--warn); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="appbar">
+  <div class="brand">QIDI Plus 5<small>Dashboard</small></div>
+  <span class="chip"><span class="dot" id="connDot"></span><span id="connText">Connecting…</span></span>
+  <span class="spacer"></span>
+  <label class="host">Printer <input type="text" id="host" spellcheck="false" placeholder="printer IP address"></label>
+</div>
+<div class="banner" id="banner"></div>
+
+<div class="dash">
+  <div class="col">
+    <section class="card" data-card="ready">
+      <header><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M8 13h8M10 17h4"/></svg>
+        <h2 id="readyTitle">Ready</h2><span class="hinfo" id="readyInfo"></span><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body" id="readyBody">
+        <div class="job">
+          <div class="thumb" id="rThumb"></div>
+          <div style="flex:1;min-width:0">
+            <div class="fname" id="rFile">No print loaded</div>
+            <div class="muted" id="rSub"></div>
+            <div class="bar"><div id="rBar"></div></div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k">Progress</div><div class="v" id="rProg">–</div></div>
+          <div class="stat"><div class="k">Elapsed</div><div class="v" id="rElapsed">–</div></div>
+          <div class="stat"><div class="k">Remaining</div><div class="v" id="rLeft">–</div></div>
+          <div class="stat"><div class="k">Layer</div><div class="v" id="rLayer">–</div></div>
+          <div class="stat"><div class="k">Speed</div><div class="v" id="rSpeed">–</div></div>
+          <div class="stat"><div class="k">Flow</div><div class="v" id="rFlow">–</div></div>
+          <div class="stat"><div class="k">Filament used</div><div class="v" id="rFil">–</div></div>
+          <div class="stat"><div class="k">Position</div><div class="v" id="rPos">–</div></div>
+        </div>
+        <div class="row ready-actions">
+          <button class="btn" id="bPause">Pause</button>
+          <button class="btn" id="bResume">Resume</button>
+          <button class="btn danger" id="bCancel">Cancel</button>
+          <span class="spacer"></span>
+          <button class="btn" id="bRestart" title="Klipper RESTART (not FIRMWARE_RESTART)">Restart Klipper</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-card="box">
+      <header><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="7" cy="12.5" r="2.5"/><circle cx="17" cy="12.5" r="2.5"/><path d="M12 6v13"/></svg>
+        <h2>Control Box</h2><span class="hinfo" id="boxInfoHead"></span><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body">
+        <div class="boxinfo" id="boxInfo"></div>
+        <div id="boxes"></div>
+        <p class="muted" style="font-size:12px;margin:12px 0 0">Saved with the <code>SET_SLOT_FILAMENT</code> macro (same data the touchscreen uses). Editing is paused while printing.</p>
+      </div>
+    </section>
+
+    <section class="card" data-card="console">
+      <header><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l3 3-3 3M12 15h5"/></svg>
+        <h2>Console</h2><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body">
+        <div class="log" id="log"></div>
+        <div class="cin">
+          <input type="text" id="cmd" placeholder="Send G-code (Enter). ↑/↓ for history" spellcheck="false" autocomplete="off">
+          <button class="btn primary" id="send">Send</button>
+        </div>
+        <label class="row muted" style="font-size:12px;margin-top:8px"><input type="checkbox" id="hideAuto" checked> Hide automatic status messages (lights, screen, LEDs)</label>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card" data-card="thermals">
+      <header><svg class="ic" viewBox="0 0 24 24"><path d="M14 14.8V4a2 2 0 1 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>
+        <h2>Thermals</h2><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body">
+        <table><thead><tr class="totrow"><th></th><th class="num" colspan="1"><div class="totw" id="totW" title="">– W</div></th><th colspan="2"></th></tr><tr><th>Name</th><th class="num">Power</th><th class="num">Actual</th><th class="num">Target</th></tr></thead><tbody id="thermRows"></tbody></table>
+        <div class="chartwrap"><canvas class="chart" id="chart"></canvas><div class="ctip" id="ctip"></div></div>
+        <div class="muted" style="font-size:11px;margin-top:4px">Last 10 minutes. Dashed lines are targets. View only.</div>
+      </div>
+    </section>
+
+    <section class="card closed" data-card="camera">
+      <header><svg class="ic" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <h2>Camera</h2><span class="hinfo" id="camInfo">Off</span><button class="tog" title="Expand"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body">
+        <div class="cam" id="cam"><span class="muted">Stream stopped</span></div>
+        <div class="muted" style="font-size:11px;margin-top:6px">Streams only while this panel is open and the page is visible. Collapse it to stop.</div>
+      </div>
+    </section>
+
+    <section class="card" data-card="fans">
+      <header><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7s3 4-2 7M14 12c4 0 7 1 7 4s-4 3-7-2M12 14c0 4-1 7-4 7s-3-4 2-7M10 12c-4 0-7-1-7-4s4-3 7 2"/></svg>
+        <h2>Fans &amp; Outputs</h2><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body" id="fans"></div>
+    </section>
+
+    <section class="card" data-card="jobs">
+      <header><svg class="ic" viewBox="0 0 24 24"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg>
+        <h2>Jobs</h2><span class="hinfo" id="jobsInfo"></span><button class="tog" title="Collapse"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></header>
+      <div class="body">
+        <div class="tabs"><button class="on" data-tab="files">Files</button><button data-tab="history">History</button></div>
+        <div id="tabFiles"><table class="files"><tbody id="fileRows"></tbody></table></div>
+        <div id="tabHistory" hidden><table class="files"><tbody id="histRows"></tbody></table></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<dialog id="printDlg">
+  <header id="pdTitle"></header>
+  <div class="dbody">
+    <div class="job"><div class="thumb" id="pdThumb"></div><div class="muted" id="pdMeta"></div></div>
+    <label class="row"><span class="switch"><input type="checkbox" id="pdBox"><span></span></span> Use the Control Box</label>
+    <div id="pdMap"></div>
+  </div>
+  <footer><button class="btn" id="pdCancel">Cancel</button><button class="btn primary" id="pdStart">Print</button></footer>
+</dialog>
+
+<script>
+"use strict";
+// ---------- Reference data ----------
+// Display names for QIDI filament IDs (from QIDI Studio profiles).
+const NAMES = {
+  QFA00: "QIDI PLA Basic", QFA01: "QIDI PLA Matte Basic", QFA02: "QIDI PLA Rapido",
+  QFA03: "QIDI PLA Rapido Matte", QFA04: "QIDI PLA Rapido Metal", QFA05: "QIDI PLA Rapido Silk",
+  QFA16: "QIDI WOOD Rapido", QFA50: "QIDI PLA-CF", QFA90: "Generic PLA", QFA91: "Generic PLA+",
+  QFA92: "Generic PLA Silk", QFB01: "QIDI ASA", QFB02: "QIDI ASA-Aero", QFB50: "QIDI ABS-GF",
+  QFB51: "QIDI ASA-CF20 Core", QFB53: "QIDI ABS Odorless", QFB54: "QIDI ABS Rapido",
+  QFB55: "QIDI ABS Rapido Metal", QFB91: "Generic ABS", QFC02: "QIDI PC-ABS-FR", QFC90: "Generic PC",
+  QFG00: "QIDI PETG Basic", QFG02: "QIDI PETG Rapido", QFG03: "QIDI PETG Tough",
+  QFG04: "QIDI PETG Translucent", QFG50: "QIDI PETG-CF", QFG51: "QIDI PETG-GF", QFG90: "Generic PETG",
+  QFL10: "HATCHBOX PLA", QFL11: "HATCHBOX PETG", QFL12: "HATCHBOX ABS", QFL20: "PolyLite PLA",
+  QFL22: "PolyLite ABS", QFL24: "Polymaker PLA-HT", QFL30: "Bambu PLA", QFL31: "Bambu PETG",
+  QFL32: "Bambu ABS", QFL60: "Overture PLA", QFL62: "Overture ABS", QFN04: "QIDI PAHT-CF",
+  QFN05: "QIDI PA6-CF", QFN12: "QIDI PA12-CF", QFN14: "QIDI PAHT-GF", QFN20: "QIDI UltraPA",
+  QFN21: "QIDI UltraPA-CF25", QFP01: "QIDI PPS-CF", QFP02: "QIDI PPS-GF",
+  QFS01: "QIDI Support For PET-PA", QFS03: "QIDI Support For PAHT", QFT01: "QIDI PET-CF",
+  QFT02: "QIDI PET-GF", QFU00: "QIDI TPU-Aero", QFU01: "QIDI TPU 95A-HF", QFU02: "QIDI TPU-GF",
+  QFU03: "QIDI PEBA 95A", QFU91: "Generic TPU 95A",
+};
+// QIDI's own color palette (officiall_filas_list.cfg [colordict]).
+const PRESETS = ["FAFAFA","060606","D9E3ED","5CF30F","63E492","2850FF","FE98FE","DFD628","228332","99DEFF",
+  "1714B0","CEC0FE","CADE4B","1353AB","5EA9FD","A878FF","FE717A","FF362D","E2DFCD","898F9B","6E3812",
+  "CAC59F","F28636","B87F2B"];
+const BUSY_STATES = ["printing", "paused"];
+const STATE_TITLE = { standby: "Ready", printing: "Printing", paused: "Paused", complete: "Complete",
+  cancelled: "Cancelled", error: "Error", startup: "Starting up", shutdown: "Shutdown", disconnected: "Disconnected" };
+const CHART_COLORS = ["#ff5252", "#42a5f5", "#66bb6a", "#ffa726", "#ab47bc", "#26c6da", "#ffee58", "#ec407a"];
+const AUTO_MSG = /SMART_STATUS|smart_output_pin|neopixel|UI_EVENT|caselight\]/i;
+const FAN_PREFIXES = ["fan", "fan_generic", "controller_fan", "heater_fan", "temperature_fan", "box_heater_fan"];
+
+// ---------- Helpers ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hexOf = (arr) => (Array.isArray(arr) && arr[0] ? String(arr[0]).replace("#", "").toUpperCase() : "");
+const validHex = (h) => /^[0-9A-F]{6}$/.test(h);
+const pretty = (name) => { const n = name.split(" ").pop().replace(/_/g, " "); return n.charAt(0).toUpperCase() + n.slice(1); };
+function fmtDur(s) {
+  if (s == null || !isFinite(s) || s < 0) return "–";
+  s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : m ? `${m}m ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
+}
+const fmtSize = (b) => b > 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.round(b / 1e3) + " KB";
+const fmtDate = (t) => new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const bigType = (t) => String(t || "").split(/[ \-/+]+/)[0].toUpperCase();
+function colorDist(a, b) {
+  const p = (h) => [0, 2, 4].map((i) => parseInt(String(h).replace("#", "").slice(i, i + 2), 16) || 0);
+  const x = p(a), y = p(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+function banner(text, isErr) {
+  const b = $("banner"); b.textContent = text || "";
+  b.className = "banner" + (text ? " show" : "") + (isErr ? " err" : "");
+}
+
+// ---------- Settings ----------
+// Printer address: enter it once in the top bar; it's remembered in this browser.
+// Optional: open the page as http://localhost:8765/?printer=<printer-ip> to set it from the link.
+let host = "";
+try { host = localStorage.getItem("qidiHost") || ""; } catch (e) {}
+const fromUrl = new URLSearchParams(location.search).get("printer");
+if (fromUrl) { host = fromUrl.trim(); try { localStorage.setItem("qidiHost", host); } catch (e) {} }
+$("host").value = host;
+$("host").addEventListener("change", () => {
+  host = $("host").value.trim();
+  try { localStorage.setItem("qidiHost", host); } catch (e) {}
+  resetUi(); connect();
+});
+const api = (path) => `http://${host}:7125${path}`;
+
+// ---------- Moonraker connection (websocket, JSON-RPC) ----------
+let ws = null, rpcId = 0, reconnectTimer = null, connected = false;
+const pending = new Map();
+const S = {};                 // live printer objects
+let klippyState = "disconnected";
+
+function call(method, params) {
+  return new Promise((resolve, reject) => {
+    if (!ws || ws.readyState !== 1) return reject(new Error("Not connected to the printer"));
+    const id = ++rpcId;
+    pending.set(id, { resolve, reject });
+    ws.send(JSON.stringify({ jsonrpc: "2.0", method, params: params || {}, id }));
+    setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error("Timed out")); } }, 30000);
+  });
+}
+const gcode = (script) => call("printer.gcode.script", { script });
+
+function setConn(kind, text) { $("connDot").className = "dot " + kind; $("connText").textContent = text; }
+
+function connect() {
+  clearTimeout(reconnectTimer);
+  if (ws) { ws.onclose = null; try { ws.close(); } catch (e) {} }
+  if (!host) {
+    setConn("warn", "No printer set");
+    banner("Enter your printer's IP address in the Printer box (top right). It's shown on the printer's touchscreen under network settings.");
+    $("host").focus();
+    return;
+  }
+  setConn("", "Connecting…");
+  try { ws = new WebSocket(`ws://${host}:7125/websocket`); } catch (e) { scheduleReconnect(); return; }
+  ws.onopen = () => { connected = true; init().catch((e) => console.warn(e)); };
+  ws.onmessage = (ev) => handle(JSON.parse(ev.data));
+  ws.onclose = () => {
+    connected = false; klippyState = "disconnected";
+    pending.forEach((p) => p.reject(new Error("Connection closed"))); pending.clear();
+    setConn("err", "Can't reach printer");
+    banner(`Can't reach the printer at ${host}. Retrying… (open this page with the launcher, from localhost)`, true);
+    render();
+    scheduleReconnect();
+  };
+}
+function scheduleReconnect() { clearTimeout(reconnectTimer); reconnectTimer = setTimeout(connect, 3000); }
+
+function merge(status) {
+  for (const k in status) {
+    if (status[k] && typeof status[k] === "object" && !Array.isArray(status[k])) S[k] = Object.assign(S[k] || {}, status[k]);
+    else S[k] = status[k];
+  }
+}
+
+function handle(m) {
+  if (m.id && pending.has(m.id)) {
+    const p = pending.get(m.id); pending.delete(m.id);
+    if (m.error) p.reject(new Error(m.error.message || "Error")); else p.resolve(m.result);
+    return;
+  }
+  switch (m.method) {
+    case "notify_status_update": merge(m.params[0]); scheduleRender(); break;
+    case "notify_gcode_response": addLog(m.params[0], "response", Date.now() / 1000); break;
+    case "notify_klippy_ready": init().catch(() => {}); break;
+    case "notify_klippy_shutdown": klippyState = "shutdown"; refreshInfo(); break;
+    case "notify_klippy_disconnected": klippyState = "disconnected"; render(); setTimeout(() => init().catch(() => {}), 2000); break;
+    case "notify_filelist_changed": {
+      const it = (m.params[0] || {}).item || {};
+      if (it.path) metaCache.delete(it.path);   // file changed: re-read its details
+      loadFiles(); break;
+    }
+    case "notify_history_changed": loadHistory(); break;
+  }
+}
+
+let infoMsg = "";
+async function refreshInfo() {
+  try { const i = await call("printer.info"); klippyState = i.state; infoMsg = i.state_message || ""; } catch (e) {}
+  render();
+}
+
+let initRunning = false;
+async function init() {
+  if (initRunning) return; initRunning = true;
+  try {
+    await call("server.connection.identify", { client_name: "QIDI Plus 5 dashboard", version: "2.0", type: "web", url: location.href }).catch(() => {});
+    const info = await call("printer.info");
+    klippyState = info.state; infoMsg = info.state_message || "";
+    setConn(klippyState === "ready" ? "ok" : "warn", klippyState === "ready" ? "Connected" : "Klipper: " + klippyState);
+    banner(klippyState === "ready" ? "" : "Klipper is " + klippyState + ". " + infoMsg, klippyState !== "startup");
+    loadFiles(); loadHistory(); loadConsole();
+    if (klippyState !== "ready") { render(); if (klippyState === "startup") setTimeout(() => { initRunning = false; init(); }, 2000); return; }
+
+    const objs = (await call("printer.objects.list")).objects;
+    const want = ["webhooks", "print_stats", "virtual_sdcard", "display_status", "idle_timeout", "pause_resume",
+      "toolhead", "gcode_move", "heaters", "box_extras", "save_variables", "gcode_macro _BOX_SLOT_DATA"];
+    for (const o of objs) {
+      const type = o.split(" ")[0];
+      if (FAN_PREFIXES.includes(type) || type === "output_pin" || type === "smart_output_pin" || type === "filament_switch_sensor" ||
+          type === "extruder" || type === "heater_bed" || type === "heater_generic" || type === "temperature_sensor") want.push(o);
+    }
+    const sub = {};
+    for (const o of want) if (objs.includes(o)) sub[o] = null;
+    sub.toolhead = ["homed_axes", "position"];
+    const r = await call("printer.objects.subscribe", { objects: sub });
+    for (const k in S) delete S[k];
+    merge(r.status);
+    await loadTempHistory();
+    buildThermals(); buildFans();
+    render();
+  } finally { initRunning = false; }
+}
+
+// ---------- Render scheduling ----------
+let renderTimer = null;
+function scheduleRender() { if (!renderTimer) renderTimer = setTimeout(() => { renderTimer = null; render(); }, 250); }
+function render() {
+  renderReady(); renderThermals(); renderFans(); renderBox();
+}
+
+function printState() {
+  if (!connected) return "disconnected";
+  if (klippyState !== "ready") return klippyState;
+  return (S.print_stats && S.print_stats.state) || "standby";
+}
+const isBusy = () => BUSY_STATES.includes(printState()) || klippyState !== "ready";
+
+// ---------- Ready ----------
+let curFile = null, curMeta = null;
+function renderReady() {
+  const st = printState(), ps = S.print_stats || {};
+  $("readyTitle").textContent = STATE_TITLE[st] || st;
+  if (connected && klippyState === "ready") setConn(BUSY_STATES.includes(st) ? "warn" : "ok", "Connected · " + (STATE_TITLE[st] || st));
+  $("readyInfo").textContent = klippyState !== "ready" && connected ? infoMsg.split("\n")[0] : "";
+
+  const file = ps.filename || "";
+  if (file !== curFile) {
+    curFile = file; curMeta = null; $("rThumb").style.backgroundImage = "";
+    if (file) getMeta(file).then((m) => { if (curFile === file) { curMeta = m; $("rThumb").style.backgroundImage = thumbCss(m); renderReady(); } });
+  }
+  const progress = (S.virtual_sdcard && S.virtual_sdcard.progress) || 0;
+  const active = BUSY_STATES.includes(st);
+  $("rFile").textContent = file || "No print loaded";
+  $("rSub").textContent = file ? (active ? "" : `Last print · ${STATE_TITLE[st] || st}`) : "";
+  $("rBar").style.width = (file ? progress * 100 : 0) + "%";
+  $("rProg").textContent = file ? (progress * 100).toFixed(1) + "%" : "–";
+  const dur = ps.print_duration || 0;
+  $("rElapsed").textContent = file ? fmtDur(ps.total_duration || dur) : "–";
+  let left = null;
+  if (active) {
+    if (progress > 0.05 && dur > 0) left = dur / progress - dur;
+    else if (curMeta && curMeta.estimated_time) left = curMeta.estimated_time - dur;
+  }
+  $("rLeft").textContent = active ? fmtDur(left) : "–";
+  const info = ps.info || {};
+  $("rLayer").textContent = info.total_layer ? `${info.current_layer || 0} / ${info.total_layer}` : "–";
+  const gm = S.gcode_move || {};
+  $("rSpeed").textContent = gm.speed_factor != null ? Math.round(gm.speed_factor * 100) + "%" : "–";
+  $("rFlow").textContent = gm.extrude_factor != null ? Math.round(gm.extrude_factor * 100) + "%" : "–";
+  $("rFil").textContent = file && ps.filament_used ? (ps.filament_used / 1000).toFixed(2) + " m" : "–";
+  const th = S.toolhead || {};
+  $("rPos").textContent = th.position ? th.position.slice(0, 3).map((v) => v.toFixed(1)).join(", ") + (th.homed_axes ? "" : " (not homed)") : "–";
+
+  $("bPause").hidden = st !== "printing";
+  $("bResume").hidden = st !== "paused";
+  $("bCancel").hidden = !active;
+  $("bRestart").hidden = !connected || klippyState === "ready";
+}
+$("bPause").onclick = () => call("printer.print.pause").catch((e) => alert(e.message));
+$("bResume").onclick = () => call("printer.print.resume").catch((e) => alert(e.message));
+$("bCancel").onclick = () => { if (confirm("Cancel the current print?")) call("printer.print.cancel").catch((e) => alert(e.message)); };
+$("bRestart").onclick = () => { if (confirm("Restart Klipper (RESTART)?")) call("printer.restart").catch((e) => alert(e.message)); };
+
+// ---------- Thermals ----------
+let sensors = [];                 // object names shown in the table/chart
+const series = {};                // name -> {temps: [], targets: []}
+const CHART_LEN = 600;            // 10 minutes at 1 sample/s
+const hasTarget = (n) => !n.startsWith("temperature_sensor");
+function sensorLabel(n) {
+  if (n === "extruder") return "Extruder";
+  if (n === "heater_bed") return "Bed";
+  if (n === "heater_generic chamber") return "Chamber";
+  if (n === "heater_generic heater_box1") return "Box 1 heater";
+  if (n === "temperature_sensor Chamber_Thermal_Protection_Sensor") return "Chamber safety sensor";
+  const m = n.match(/heater_temp_([ab])_box(\d+)/); if (m) return `Box ${m[2]} heater ${m[1].toUpperCase()}`;
+  return pretty(n);
+}
+async function loadTempHistory() {
+  // Heaters first, safety/monitor sensors (no target) at the bottom.
+  const ORDER = ["extruder", "heater_bed", "heater_generic chamber", "heater_generic heater_box1",
+    "temperature_sensor Chamber_Thermal_Protection_Sensor", "temperature_sensor heater_temp_a_box1", "temperature_sensor heater_temp_b_box1"];
+  const order = (n) => { const i = ORDER.indexOf(n); return i >= 0 ? i : n.startsWith("temperature_sensor") ? 99 : 50; };
+  sensors = ((S.heaters && S.heaters.available_sensors) || []).filter((n) => S[n]).sort((a, b) => order(a) - order(b));
+  for (const k in series) delete series[k];
+  let store = {};
+  try { store = await call("server.temperature_store", { include_monitors: false }); } catch (e) {}
+  for (const n of sensors) {
+    const h = store[n] || {};
+    series[n] = { temps: (h.temperatures || []).slice(-CHART_LEN), targets: (h.targets || []).slice(-CHART_LEN) };
+  }
+}
+function buildThermals() {
+  $("thermRows").innerHTML = sensors.map((n, i) => `<tr data-n="${esc(n)}">
+    <td><span class="swatch" style="background:${CHART_COLORS[i % CHART_COLORS.length]}"></span>${esc(sensorLabel(n))}</td>
+    <td class="num pw"></td><td class="num act"></td><td class="num tgt"></td></tr>`).join("");
+}
+const TEMP_TOL = 2;   // °C either side of target that counts as "on target"
+function renderThermals() {
+  for (const tr of $("thermRows").children) {
+    const o = S[tr.dataset.n] || {};
+    const act = tr.querySelector(".act");
+    act.textContent = o.temperature != null ? o.temperature.toFixed(1) + " °C" : "–";
+    // Colour vs target: blue = below, green = within ±TEMP_TOL, red = above. No colour without a target.
+    let cls = "";
+    if (o.target > 0 && o.temperature != null) {
+      const d = o.temperature - o.target;
+      cls = Math.abs(d) <= TEMP_TOL ? "t-ok" : d < 0 ? "t-cool" : "t-hot";
+    }
+    act.className = "num act " + cls;
+    tr.querySelector(".tgt").textContent = hasTarget(tr.dataset.n) ? (o.target ? o.target.toFixed(0) + " °C" : "off") : "";
+    // Power: average of the last 10 one-second samples, drawn as a red bar on black while a target is set.
+    const pw = tr.querySelector(".pw");
+    if (o.power == null) { pw.textContent = ""; pw.className = "num pw"; pw.style.background = ""; continue; }
+    const hist = powerHist[tr.dataset.n] || [];
+    const avg = hist.length ? hist.reduce((a, b) => a + b, 0) / hist.length : o.power;
+    const pct = Math.round(avg * 100);
+    pw.textContent = pct + "%";
+    pw.title = `Average of the last ${hist.length || 1} s (now ${Math.round(o.power * 100)}%)`;
+    if (o.target > 0) {
+      pw.className = "num pw pbar";
+      pw.style.background = `linear-gradient(to right, #d32f2f ${pct}%, #000 ${pct}%)`;
+    } else { pw.className = "num pw"; pw.style.background = ""; }
+  }
+  renderTotalWatts();
+}
+// Rated heater wattages (user's readings). Draw ≈ 10 s average power × rating.
+const HEATER_WATTS = { "extruder": 150, "heater_bed": 500, "heater_generic chamber": 550, "heater_generic heater_box1": 245 };
+function renderTotalWatts() {
+  let total = 0; const parts = [];
+  for (const [n, w] of Object.entries(HEATER_WATTS)) {
+    const o = S[n]; if (!o || o.power == null) continue;
+    const h = powerHist[n] || [], avg = h.length ? h.reduce((a, b) => a + b, 0) / h.length : o.power;
+    total += avg * w; parts.push(`${sensorLabel(n)}: ${Math.round(avg * w)} W of ${w} W`);
+  }
+  const el = $("totW");
+  el.innerHTML = `<small>Total</small>${parts.length ? Math.round(total) : "–"} W`;
+  el.title = `Heater draw, 10 s average (power × rated watts):\n${parts.join("\n")}\nMax if all on: ${Object.values(HEATER_WATTS).reduce((a, b) => a + b, 0)} W\nNot included: motors, fans, electronics, lights.`;
+}
+const POWER_AVG_S = 10;
+const powerHist = {};   // heater name -> last POWER_AVG_S power samples (0..1)
+setInterval(() => {   // sample once a second for the chart
+  if (klippyState !== "ready") return;
+  for (const n of sensors) {
+    const s = series[n]; if (!s) continue; const o = S[n] || {};
+    s.temps.push(o.temperature ?? null); s.targets.push(o.target ?? 0);
+    if (s.temps.length > CHART_LEN) s.temps.shift();
+    if (s.targets.length > CHART_LEN) s.targets.shift();
+    if (o.power != null) {
+      const h = (powerHist[n] = powerHist[n] || []);
+      h.push(o.power); if (h.length > POWER_AVG_S) h.shift();
+    }
+  }
+  lastSampleAt = Date.now();
+  renderThermals();
+  if (!document.hidden && !document.querySelector('[data-card="thermals"]').classList.contains("closed")) drawChart();
+}, 1000);
+function drawChart() {
+  const c = $("chart"), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  let max = 40;
+  for (const n of sensors) for (const v of [...series[n].temps, ...series[n].targets]) if (v != null && v > max) max = v;
+  max = Math.ceil(max / 20) * 20;
+  const L = 34, B = 16, pw = w - L - 4, ph = h - B - 6;
+  g.font = "11px system-ui"; g.fillStyle = "#777"; g.strokeStyle = "#2c2c2c"; g.lineWidth = 1;
+  // Temperature lines every 20°; labels thinned out when lines get close together.
+  const gap = 20 / max * ph, every = Math.max(1, Math.ceil(14 / gap));
+  for (let v = 0, k = 0; v <= max; v += 20, k++) {
+    const y = Math.round(6 + ph - v / max * ph) + 0.5; g.beginPath(); g.moveTo(L, y); g.lineTo(L + pw, y); g.stroke();
+    if (k % every === 0) g.fillText(v + "°", 2, y + 4);
+  }
+  // Time lines every minute; labels every 2 minutes.
+  for (let m = 10; m >= 0; m--) {
+    const x = Math.round(L + (10 - m) / 10 * pw) + 0.5;
+    g.strokeStyle = "#262626"; g.beginPath(); g.moveTo(x, 6); g.lineTo(x, 6 + ph); g.stroke();
+    if (m % 2 === 0) {
+      const t = m ? `-${m}m` : "now", tw = g.measureText(t).width;
+      g.fillText(t, Math.min(Math.max(x - tw / 2, L), L + pw - tw), h - 3);
+    }
+  }
+  sensors.forEach((n, i) => {
+    const s = series[n], col = CHART_COLORS[i % CHART_COLORS.length];
+    const line = (arr, dash) => {
+      g.setLineDash(dash); g.strokeStyle = col; g.lineWidth = dash.length ? 1 : 1.6; g.beginPath();
+      let started = false;
+      arr.forEach((v, j) => {
+        if (v == null) { started = false; return; }
+        const x = L + (j + CHART_LEN - arr.length) / (CHART_LEN - 1) * pw, y = 6 + ph - v / max * ph;
+        if (started) g.lineTo(x, y); else { g.moveTo(x, y); started = true; }
+      });
+      g.stroke();
+    };
+    line(s.temps, []);
+    if (hasTarget(n) && s.targets.some((v) => v > 0)) line(s.targets, [4, 4]);
+  });
+  g.setLineDash([]);
+
+  // Hover: crosshair, dots and tooltip for the sample under the mouse.
+  const tip = $("ctip");
+  if (hoverX == null) { tip.style.display = "none"; return; }
+  const hx = Math.min(Math.max(hoverX, L), L + pw);                  // snap to the plot edges
+  const jg = Math.round((hx - L) / pw * (CHART_LEN - 1));           // position on the 10-minute grid
+  const x = L + jg / (CHART_LEN - 1) * pw;
+  g.strokeStyle = "#ffffff55"; g.lineWidth = 1; g.beginPath(); g.moveTo(x, 6); g.lineTo(x, 6 + ph); g.stroke();
+  const rows = [];
+  sensors.forEach((n, i) => {
+    const s = series[n], col = CHART_COLORS[i % CHART_COLORS.length];
+    const j = jg - (CHART_LEN - s.temps.length), v = j >= 0 ? s.temps[j] : null;
+    if (v == null) return;
+    g.fillStyle = col; g.beginPath(); g.arc(x, 6 + ph - v / max * ph, 3, 0, Math.PI * 2); g.fill();
+    const tj = jg - (CHART_LEN - s.targets.length), t = tj >= 0 ? s.targets[tj] : 0;
+    rows.push(`<div class="tr"><span class="swatch" style="background:${col};margin:0"></span>${esc(sensorLabel(n))}
+      <b>${v.toFixed(1)} °C${hasTarget(n) && t > 0 ? ` <i>→ ${t.toFixed(0)}</i>` : ""}</b></div>`);
+  });
+  if (!rows.length) { tip.style.display = "none"; return; }
+  const back = CHART_LEN - 1 - jg;   // seconds before the latest sample
+  const when = new Date(lastSampleAt - back * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  tip.innerHTML = `<div class="tt">${when}${back ? ` · ${fmtDur(back)} ago` : " · now"}</div>${rows.join("")}`;
+  tip.style.display = "block";
+  const tw = tip.offsetWidth;
+  tip.style.left = (x + 12 + tw > w ? Math.max(0, x - 12 - tw) : x + 12) + "px";
+}
+let hoverX = null, lastSampleAt = Date.now();
+$("chart").addEventListener("pointermove", (e) => { hoverX = e.offsetX; drawChart(); });
+$("chart").addEventListener("pointerleave", () => { hoverX = null; drawChart(); });
+
+// ---------- Fans & outputs ----------
+function buildFans() {
+  const names = Object.keys(S);
+  const ctrl = names.filter((n) => ["fan", "fan_generic"].includes(n.split(" ")[0]));
+  const auto = names.filter((n) => ["controller_fan", "heater_fan", "temperature_fan", "box_heater_fan"].includes(n.split(" ")[0]));
+  const sv = (S.save_variables && S.save_variables.variables) || {};
+  const outs = names.filter((n) => n.startsWith("output_pin ") && !/beeper/.test(n) &&
+    !(n === "output_pin polar_cooler" && sv.enable_polar_cooler === 0));
+  const label = (n) => {
+    if (n === "fan") return "Part fan";
+    let m = n.match(/heater_fan_([ab])_box(\d+)$/); if (m) return `Box ${m[2]} heater fan ${m[1].toUpperCase()}`;
+    m = n.match(/board_fan_box(\d+)$/); if (m) return `Box ${m[1]} board fan`;
+    return pretty(n);
+  };
+  let h = "";
+  if (ctrl.length) h += `<div class="subhead">Fans</div>` + ctrl.map((n) => `<div class="fan" data-n="${esc(n)}" data-kind="ctrl">
+      <div>${esc(label(n))}<div class="muted rpm" style="font-size:11px"></div></div>
+      <input type="range" min="0" max="100" step="1"><div class="val"></div></div>`).join("");
+  if (auto.length) h += `<div class="subhead">Automatic fans (view only)</div>` + auto.map((n) => `<div class="fan" data-n="${esc(n)}" data-kind="ro">
+      <div>${esc(label(n))}<div class="muted rpm" style="font-size:11px"></div></div>
+      <div class="ro"><div></div></div><div class="val"></div></div>`).join("");
+  if (outs.length) h += `<div class="subhead">Outputs</div>` + outs.map((n) => `<div class="fan pinrow" data-n="${esc(n)}" data-kind="pin">
+      <div>${esc(pretty(n))}<div class="muted note" style="font-size:11px"></div></div>
+      <div class="val"><label class="switch" title="${esc(pretty(n))} on/off"><input type="checkbox" aria-label="${esc(pretty(n))}"><span></span></label></div></div>`).join("");
+  $("fans").innerHTML = h || `<span class="muted">No fans found.</span>`;
+
+  for (const row of $("fans").querySelectorAll(".fan")) {
+    const n = row.dataset.n;
+    if (row.dataset.kind === "ctrl") {
+      const r = row.querySelector("input");
+      r.addEventListener("input", () => { row.querySelector(".val").textContent = r.value + "%"; });
+      r.addEventListener("change", () => {
+        const v = Number(r.value) / 100;
+        const cmd = n === "fan" ? `M106 S${Math.round(v * 255)}` : `SET_FAN_SPEED FAN=${n.split(" ")[1]} SPEED=${v.toFixed(2)}`;
+        gcode(cmd).catch((e) => alert(e.message));
+      });
+    } else if (row.dataset.kind === "pin") {
+      const cb = row.querySelector("input");
+      cb.addEventListener("change", () => gcode(`SET_PIN PIN=${n.split(" ")[1]} VALUE=${cb.checked ? 1 : 0}`).catch((e) => { alert(e.message); renderFans(); }));
+    }
+  }
+}
+function renderFans() {
+  for (const row of $("fans").querySelectorAll(".fan")) {
+    const o = S[row.dataset.n] || {};
+    if (row.dataset.kind === "pin") {
+      const cb = row.querySelector("input"); cb.checked = !!o.value; cb.disabled = klippyState !== "ready";
+      const smart = S["smart_" + row.dataset.n];
+      row.querySelector(".note").textContent = smart && smart.enable ? "Auto mode on (the printer may switch it by itself)" : "";
+      continue;
+    }
+    const pct = Math.round((o.speed || 0) * 100);
+    row.querySelector(".rpm").textContent = o.rpm ? Math.round(o.rpm) + " RPM" : "";
+    if (row.dataset.kind === "ctrl") {
+      const r = row.querySelector("input");
+      if (document.activeElement !== r) { r.value = pct; row.querySelector(".val").textContent = pct + "%"; }
+      r.disabled = klippyState !== "ready";
+    } else {
+      row.querySelector(".ro > div").style.width = pct + "%";
+      row.querySelector(".val").textContent = pct + "%";
+    }
+  }
+}
+
+// ---------- Control box ----------
+const slots = new Map();   // "1".."16" / "EXT" -> slot card state
+function boxSlotIds() {
+  const d = S["gcode_macro _BOX_SLOT_DATA"];
+  return d && d.filaments ? Object.values(d.filaments) : [];
+}
+function idOptions(select, currentId) {
+  const groups = {};
+  const ids = [...new Set([...boxSlotIds(), currentId].filter(Boolean))];
+  for (const id of ids) {
+    const name = NAMES[id] || id;
+    const brand = name.startsWith("QIDI ") ? "QIDI" : name.startsWith("Generic ") ? "Generic" : "Other brands";
+    (groups[brand] = groups[brand] || []).push([id, name]);
+  }
+  select.innerHTML = "";
+  for (const brand of ["QIDI", "Generic", "Other brands"]) {
+    if (!groups[brand]) continue;
+    const og = document.createElement("optgroup"); og.label = brand;
+    groups[brand].sort((a, b) => a[1].localeCompare(b[1]));
+    for (const [id, name] of groups[brand]) {
+      const o = document.createElement("option"); o.value = id; o.textContent = name.replace(/^(QIDI|Generic) /, ""); og.appendChild(o);
+    }
+    select.appendChild(og);
+  }
+  if (!currentId) { const o = document.createElement("option"); o.value = ""; o.textContent = "— not set —"; o.disabled = true; select.prepend(o); }
+  select.value = currentId || "";
+}
+function makeSlot(slot) {
+  const el = document.createElement("div");
+  el.className = "slot";
+  el.innerHTML = `
+    <div class="top"><div class="spool"></div><div>
+      <div class="slotno">${slot === "EXT" ? "External spool" : "Slot " + slot}<span class="badge"></span></div>
+      <div class="name"></div><div class="meta"></div></div></div>
+    <label class="f">Filament <select class="fil"></select></label>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)">Color
+      <div class="colorrow"><input type="color" class="pick"><input type="text" class="hex" maxlength="7" spellcheck="false"></div>
+      <div class="presets"></div></div>
+    <div class="actions"><button class="btn primary save">Save</button><button class="btn reset">Reset</button></div>
+    <div class="msg"></div>`;
+  const s = { el, slot, current: null, dirty: false, q: (c) => el.querySelector(c) };
+  for (const h of PRESETS) {
+    const b = document.createElement("button"); b.type = "button"; b.title = "#" + h; b.style.background = "#" + h;
+    b.addEventListener("click", () => setColor(s, h)); s.q(".presets").appendChild(b);
+  }
+  s.q(".pick").addEventListener("input", (e) => setColor(s, e.target.value.slice(1).toUpperCase()));
+  s.q(".hex").addEventListener("input", (e) => {
+    const h = e.target.value.replace("#", "").toUpperCase();
+    if (validHex(h)) setColor(s, h, true); else markDirty(s);
+  });
+  s.q(".fil").addEventListener("change", () => markDirty(s));
+  s.q(".reset").addEventListener("click", () => { s.dirty = false; renderSlot(s, s.current, true); });
+  s.q(".save").addEventListener("click", () => saveSlot(s));
+  return s;
+}
+function setColor(s, h, fromText) {
+  s.q(".pick").value = "#" + h; if (!fromText) s.q(".hex").value = h;
+  s.q(".spool").style.background = "#" + h; markDirty(s);
+}
+const wanted = (s) => ({ id: s.q(".fil").value, hex: s.q(".hex").value.replace("#", "").toUpperCase() });
+function markDirty(s) {
+  const w = wanted(s), c = s.current || {};
+  s.dirty = w.id !== (c.id || "") || w.hex !== (c.hex || "");
+  s.el.classList.toggle("dirty", s.dirty); updateSlotButtons(s);
+}
+function updateSlotButtons(s) {
+  const w = wanted(s);
+  s.q(".save").disabled = isBusy() || !boxSlotIds().length || !s.dirty || !w.id || !validHex(w.hex);
+  s.q(".reset").disabled = !s.dirty;
+}
+// Draw a slot. Fields are only overwritten when there are no unsaved edits.
+function renderSlot(s, cur, force) {
+  const key = JSON.stringify(cur) + "|" + boxSlotIds().length;
+  if (!force && key === s.lastKey) { updateSlotButtons(s); return; }
+  s.lastKey = key; s.current = cur;
+  const filName = cur.id ? (cur.label || NAMES[cur.id] || cur.id) : "Not set";
+  const empty = cur.present === false;   // true = spool in, false = empty, null = no sensor
+  s.el.classList.toggle("empty", empty);
+  const badge = s.q(".badge");
+  s.el.classList.toggle("loaded", !!cur.loaded);
+  badge.textContent = cur.loaded ? "In toolhead" : cur.present === true ? "Spool in" : empty ? "Empty" : "";
+  badge.className = "badge" + (cur.loaded ? " load" : cur.present === true ? " in" : "");
+  badge.style.display = badge.textContent ? "" : "none";
+  s.q(".name").textContent = empty ? "Empty" : filName;
+  const bits = [];
+  if (empty) bits.push(cur.id ? `No spool detected · last set: ${filName}` : "No spool detected");
+  else { if (cur.id) bits.push(cur.id); if (cur.temps) bits.push(cur.temps); if (cur.rfid) bits.push("from RFID tag"); }
+  s.q(".meta").textContent = bits.join(" · ");
+  if (!s.dirty || force) {
+    idOptions(s.q(".fil"), cur.id);
+    const h = validHex(cur.hex) ? cur.hex : "";
+    s.q(".hex").value = h; s.q(".pick").value = "#" + (h || "888888");
+    s.q(".spool").style.background = h ? "#" + h : "repeating-linear-gradient(45deg,#8883,#8883 6px,transparent 6px,transparent 12px)";
+    s.dirty = false; s.el.classList.remove("dirty");
+  }
+  updateSlotButtons(s);
+}
+async function saveSlot(s) {
+  const w = wanted(s), msg = s.q(".msg");
+  if (isBusy()) return;
+  s.q(".save").disabled = true; msg.className = "msg"; msg.textContent = "Saving…";
+  try {
+    // Re-check right before writing, in case a print just started.
+    const st = await call("printer.objects.query", { objects: { print_stats: ["state"] } });
+    if (BUSY_STATES.includes(st.status.print_stats.state)) throw new Error("A print is running; not saved.");
+    await gcode(`SET_SLOT_FILAMENT SLOT=${s.slot} FILAMENT=${w.id} COLOR=${w.hex}`);
+    s.dirty = false; msg.className = "msg ok"; msg.textContent = "Saved.";
+    setTimeout(() => { if (msg.textContent === "Saved.") msg.textContent = ""; }, 4000);
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = String(e.message || e).replace(/^.*CommandError:\s*/, ""); updateSlotButtons(s);
+  }
+}
+// Box slots as a list (used by the box panel and the print dialog).
+function boxSlotList() {
+  const out = [], bx = (S.box_extras && S.box_extras.boxes) || [], sv = (S.save_variables && S.save_variables.variables) || {};
+  const count = Math.max(1, parseInt(sv.box_count || 1, 10));
+  for (let b = 0; b < Math.min(count, bx.length); b++) {
+    for (let i = 0; i < 4; i++) {
+      const idx = b * 4 + i, info = (bx[b].filament_info || [])[i] || {};
+      const rawId = sv["filament_slot" + idx], id = typeof rawId === "string" ? rawId : "";
+      out.push({
+        idx, slot: idx + 1, box: b, label: `${b + 1}${String.fromCharCode(65 + i)}`, id, hex: hexOf(sv["color_slot" + idx]),
+        type: id && info.filament_id === id ? info.filament_type : "",
+        name: id && info.filament_id === id ? `${info.vendor_str || ""} ${info.filament_str || ""}`.trim() : "",
+        temps: id && info.min_temp ? `${info.min_temp}–${info.max_temp} °C` : "",
+        rfid: !!info.info_from_rfid,
+        present: "box_inserted_" + i in bx[b] ? !!bx[b]["box_inserted_" + i] : sv["slot" + idx] !== 0,
+      });
+    }
+  }
+  return out;
+}
+// Slot index feeding the toolhead (box_extras.loaded_slot: "slot0".."slot15", "slot16" = external), or null.
+// The printer also reports "slot16" when nothing is loaded, so the toolhead filament sensor (THR:PA1) decides:
+// no filament at the toolhead = nothing loaded.
+const TOOL_SENSOR = "filament_switch_sensor filament_switch_sensor";
+function toolheadHasFilament() {
+  const fs = S[TOOL_SENSOR];
+  return fs && typeof fs.filament_detected === "boolean" ? fs.filament_detected : null;   // null = sensor unknown
+}
+function loadedIdx() {
+  if (toolheadHasFilament() === false) return null;
+  const m = /^slot(\d+)$/.exec((S.box_extras && S.box_extras.loaded_slot) || "");
+  return m ? Number(m[1]) : null;
+}
+function loadedHtml() {
+  const li = loadedIdx(), sv = (S.save_variables && S.save_variables.variables) || {};
+  if (li == null) return toolheadHasFilament() === false ? "<b>nothing</b> (no filament at the toolhead)" : "unknown";
+  const raw = sv["filament_slot" + li], id = typeof raw === "string" ? raw : "", hex = hexOf(sv["color_slot" + li]);
+  const where = li === 16 ? "External spool" : `${Math.floor(li / 4) + 1}${String.fromCharCode(65 + li % 4)}`;
+  const sw = validHex(hex) ? `<span class="swatch" style="background:#${hex};margin:0 4px 0 6px"></span>` : " ";
+  return `<b>${where}</b>${sw}${esc(id ? (NAMES[id] || id) : "type not set")}`;
+}
+function renderBox() {
+  const bx = (S.box_extras && S.box_extras.boxes) || [];
+  const li = loadedIdx();
+  if (klippyState === "ready" && !S["gcode_macro _BOX_SLOT_DATA"]) banner("The SET_SLOT_FILAMENT macros (box_slots.cfg) aren't loaded on the printer. Slot editing is disabled.", true);
+  const sv = (S.save_variables && S.save_variables.variables) || {};
+  const b0 = bx[0];
+  if (b0) {
+    const dry = b0.dry_state ? `Drying · target ${b0.box_target_temp} °C` : "Not drying";
+    $("boxInfo").innerHTML = `<span>In toolhead: ${loadedHtml()}</span><span>Box 1: <b>${b0.aht20_temp != null ? b0.aht20_temp.toFixed(1) : "–"} °C</b></span>
+      <span>Humidity <b>${b0.aht20_humidity ?? "–"}%</b></span><span>${dry}</span>
+      <span>Box ${sv.enable_box === 1 ? "<b>enabled</b>" : "<b>disabled</b> (prints use the external spool)"}</span>`;
+    const lhead = li == null ? (toolheadHasFilament() === false ? " · Nothing loaded" : "") : li === 16 ? " · External loaded" : ` · ${Math.floor(li / 4) + 1}${String.fromCharCode(65 + li % 4)} loaded`;
+    $("boxInfoHead").textContent = `${b0.aht20_humidity ?? "–"}% RH${lhead}`;
+  }
+  const wrap = $("boxes");
+  let grid = wrap.querySelector(".grid");
+  if (!grid) { grid = document.createElement("div"); grid.className = "grid"; wrap.appendChild(grid); }
+  for (const x of boxSlotList()) {
+    let s = slots.get(String(x.slot));
+    if (!s) { s = makeSlot(x.slot); slots.set(String(x.slot), s); grid.appendChild(s.el); }
+    renderSlot(s, { id: x.id, hex: x.hex, label: x.name, temps: x.temps, rfid: x.rfid, present: x.present, loaded: li === x.idx });
+  }
+  if (S.save_variables) {
+    let es = slots.get("EXT");
+    if (!es) { es = makeSlot("EXT"); slots.set("EXT", es); grid.appendChild(es.el); }
+    const extId = typeof sv.filament_slot16 === "string" ? sv.filament_slot16 : "";
+    renderSlot(es, { id: extId, hex: hexOf(sv.color_slot16), label: "", temps: "", rfid: false, present: null, loaded: li === 16 });
+  }
+}
+
+// ---------- Camera (streams only while open and visible) ----------
+function camOpen() { return !document.querySelector('[data-card="camera"]').classList.contains("closed"); }
+function updateCamera() {
+  const box = $("cam");
+  const want = camOpen() && !document.hidden && connected;
+  const img = box.querySelector("img");
+  if (want && !img) {
+    const i = document.createElement("img");
+    i.alt = "Printer camera";
+    i.onerror = () => { box.innerHTML = `<span class="muted">Camera not available</span>`; $("camInfo").textContent = "Error"; };
+    i.src = `http://${host}/webcam/?action=stream&t=${Date.now()}`;
+    box.innerHTML = ""; box.appendChild(i);
+    $("camInfo").textContent = "Live";
+  } else if (!want && img) {
+    img.onerror = null; img.src = "data:,"; img.remove();   // drops the stream connection
+    box.innerHTML = `<span class="muted">Stream stopped</span>`;
+    $("camInfo").textContent = "Off";
+  } else if (!want) {
+    $("camInfo").textContent = "Off";
+  }
+}
+document.addEventListener("visibilitychange", updateCamera);
+
+// ---------- Console ----------
+const LOG_MAX = 500;
+const cmdHistory = []; let histPos = -1;
+async function loadConsole() {
+  try {
+    const r = await call("server.gcode_store", { count: 150 });
+    $("log").innerHTML = "";
+    for (const e of r.gcode_store) addLog(e.message, e.type, e.time, true);
+    $("log").scrollTop = $("log").scrollHeight;
+  } catch (e) {}
+}
+function addLog(text, type, time, bulk) {
+  const log = $("log");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  const div = document.createElement("div");
+  const t = new Date((time || Date.now() / 1000) * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const msg = String(text).split("\n").map((l) => l.replace(/^\/\/ ?/, "")).join("\n");
+  div.className = type === "command" ? "cmd" : /^!!/.test(text) ? "err" : "info";
+  if (AUTO_MSG.test(text)) div.dataset.auto = "1";
+  div.innerHTML = `<span class="t">${t}</span>${esc(type === "command" ? "> " + msg : msg)}`;
+  if (div.dataset.auto && $("hideAuto").checked) div.hidden = true;
+  log.appendChild(div);
+  while (log.children.length > LOG_MAX) log.firstChild.remove();
+  if (!bulk && atBottom) log.scrollTop = log.scrollHeight;
+}
+$("hideAuto").addEventListener("change", () => {
+  for (const d of $("log").querySelectorAll("[data-auto]")) d.hidden = $("hideAuto").checked;
+  $("log").scrollTop = $("log").scrollHeight;
+});
+async function sendCmd() {
+  const c = $("cmd").value.trim(); if (!c) return;
+  cmdHistory.unshift(c); if (cmdHistory.length > 50) cmdHistory.pop(); histPos = -1;
+  $("cmd").value = "";
+  addLog(c, "command"); $("log").scrollTop = $("log").scrollHeight;
+  try { await gcode(c); } catch (e) { if (!/CommandError|Error evaluating/.test(e.message)) addLog("!! " + e.message, "response"); }
+}
+$("send").onclick = sendCmd;
+$("cmd").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendCmd();
+  else if (e.key === "ArrowUp" && cmdHistory.length) { histPos = Math.min(histPos + 1, cmdHistory.length - 1); $("cmd").value = cmdHistory[histPos]; e.preventDefault(); }
+  else if (e.key === "ArrowDown") { histPos = Math.max(histPos - 1, -1); $("cmd").value = histPos < 0 ? "" : cmdHistory[histPos]; e.preventDefault(); }
+});
+
+// ---------- Jobs ----------
+const metaCache = new Map();
+function getMeta(filename) {
+  if (!metaCache.has(filename)) metaCache.set(filename, call("server.files.metadata", { filename }).catch(() => null));
+  return metaCache.get(filename);
+}
+function thumbUrl(m) {
+  if (!m || !m.thumbnails || !m.thumbnails.length) return "";
+  const t = [...m.thumbnails].sort((a, b) => b.width - a.width)[0];
+  const dir = m.filename.includes("/") ? m.filename.slice(0, m.filename.lastIndexOf("/") + 1) : "";
+  return api("/server/files/gcodes/" + (dir + t.relative_path).split("/").map(encodeURIComponent).join("/"));
+}
+const thumbCss = (m) => { const u = thumbUrl(m); return u ? `url("${u}")` : ""; };
+
+let files = [];
+async function loadFiles() {
+  try {
+    const r = await call("server.files.list", { root: "gcodes" });
+    files = r.filter((f) => !f.path.startsWith(".")).sort((a, b) => b.modified - a.modified);
+    renderFiles();
+  } catch (e) {}
+}
+function renderFiles() {
+  $("jobsInfo").textContent = files.length ? files.length + " files" : "";
+  $("fileRows").innerHTML = files.length ? files.map((f) => `<tr data-f="${esc(f.path)}">
+    <td style="width:52px"><div class="fthumb"></div></td>
+    <td><div class="fn">${esc(f.path.replace(/\.gcode(\.3mf)?$/i, ""))}</div><div class="muted fm" style="font-size:12px">${fmtDate(f.modified)} · ${fmtSize(f.size)}</div></td>
+    <td class="num" style="width:90px"><button class="btn printbtn">Print</button></td></tr>`).join("")
+    : `<tr><td class="muted">No files.</td></tr>`;
+  for (const tr of $("fileRows").querySelectorAll("tr[data-f]")) {
+    const f = tr.dataset.f;
+    tr.querySelector(".printbtn").onclick = () => openPrint(f);
+    getMeta(f).then((m) => {
+      if (!m) return;
+      tr.querySelector(".fthumb").style.backgroundImage = thumbCss(m);
+      const bits = [];
+      if (m.estimated_time) bits.push(fmtDur(m.estimated_time));
+      if (m.filament_weight_total) bits.push(m.filament_weight_total.toFixed(1) + " g");
+      if (m.filament_type) bits.push(m.filament_type.split(";").join(" + "));
+      if (bits.length) tr.querySelector(".fm").textContent += " · " + bits.join(" · ");
+    });
+  }
+  updatePrintButtons();
+}
+function updatePrintButtons() {
+  const can = connected && klippyState === "ready" && !BUSY_STATES.includes(printState());
+  document.querySelectorAll(".printbtn").forEach((b) => (b.disabled = !can));
+}
+async function loadHistory() {
+  try {
+    const r = await call("server.history.list", { limit: 25, order: "desc" });
+    $("histRows").innerHTML = r.jobs.length ? r.jobs.map((j) => `<tr>
+      <td><div class="fn">${esc(j.filename.replace(/\.gcode(\.3mf)?$/i, ""))}</div>
+        <div class="muted" style="font-size:12px">${fmtDate(j.start_time)} · ${fmtDur(j.print_duration)}${j.filament_used ? " · " + (j.filament_used / 1000).toFixed(1) + " m" : ""}</div></td>
+      <td><span class="st ${esc(j.status)}">${esc(j.status.replace(/_/g, " "))}</span></td>
+      <td class="num" style="width:90px">${j.exists ? `<button class="btn printbtn" data-f="${esc(j.filename)}">Reprint</button>` : ""}</td></tr>`).join("")
+      : `<tr><td class="muted">No print history.</td></tr>`;
+    for (const b of $("histRows").querySelectorAll(".printbtn")) b.onclick = () => openPrint(b.dataset.f);
+    updatePrintButtons();
+  } catch (e) {}
+}
+for (const t of document.querySelectorAll(".tabs button")) t.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b === t));
+  $("tabFiles").hidden = t.dataset.tab !== "files"; $("tabHistory").hidden = t.dataset.tab !== "history";
+};
+
+// ---------- Print dialog (maps file filaments to box slots like QIDI's Fluidd) ----------
+let pd = null;
+async function openPrint(filename) {
+  const m = await getMeta(filename) || {};
+  const sv = (S.save_variables && S.save_variables.variables) || {};
+  const types = (m.filament_type || "").split(";").filter(Boolean), colors = m.preset_colours || [];
+  // QIDI Studio files list the tools they use. Orca files don't, so fall back to one tool per filament in the file.
+  let tools = m.used_extruders && m.used_extruders.length ? m.used_extruders : [];
+  if (!tools.length) tools = Array.from({ length: Math.max(types.length, colors.length) }, (_, i) => i);
+  pd = { filename, m, tools, types, colors };
+  $("pdTitle").textContent = filename.replace(/\.gcode(\.3mf)?$/i, "");
+  $("pdThumb").style.backgroundImage = thumbCss(m);
+  $("pdMeta").innerHTML = [m.estimated_time ? "Time: " + fmtDur(m.estimated_time) : "", m.filament_weight_total ? "Filament: " + m.filament_weight_total.toFixed(1) + " g" : "",
+    m.filament_type ? "Types: " + esc(m.filament_type.split(";").join(" + ")) : "", m.slicer ? "Sliced with " + esc(m.slicer) : ""].filter(Boolean).join("<br>");
+  $("pdBox").checked = sv.enable_box === 1;
+  renderMap();
+  $("printDlg").showModal();
+}
+function renderMap() {
+  const useBox = $("pdBox").checked, el = $("pdMap");
+  if (!useBox) {
+    const sv = (S.save_variables && S.save_variables.variables) || {};
+    const ext = typeof sv.filament_slot16 === "string" ? (NAMES[sv.filament_slot16] || sv.filament_slot16) : "not set";
+    el.innerHTML = `<div class="muted">Prints from the external spool (${esc(ext)}).</div>` + (pd.tools.length > 1 ? `<div class="warnline">This file uses ${pd.tools.length} filaments. Without the box it will print with one.</div>` : "");
+    $("pdStart").disabled = false; return;
+  }
+  if (!pd.tools.length) {
+    el.innerHTML = `<div class="muted">This file has no filament info. It will print with T0 → slot 1A, T1 → 1B, … (same as QIDI's Fluidd).</div>`;
+    $("pdStart").disabled = false; return;
+  }
+  const loaded = boxSlotList().filter((x) => x.present);
+  const used = new Set();
+  const rows = pd.tools.map((t) => {
+    const type = pd.types[t] || "", color = pd.colors[t] || "#888888";
+    // Default: same filament type, closest color, not already taken.
+    const cands = loaded.filter((x) => bigType(x.type) === bigType(type)).sort((a, b) => colorDist(a.hex, color) - colorDist(b.hex, color));
+    const pick = cands.find((x) => !used.has(x.idx)) || cands[0];
+    if (pick) used.add(pick.idx);
+    const opts = loaded.map((x) => `<option value="${x.idx}" ${pick && pick.idx === x.idx ? "selected" : ""}>${x.label} · ${esc(x.name || NAMES[x.id] || "not set")} · #${x.hex}${bigType(x.type) !== bigType(type) ? " (different type)" : ""}</option>`).join("");
+    return `<div class="tool"><span class="swatch" style="background:${esc(color)}"></span>T${t} · ${esc(type)}</div>
+      <select data-t="${t}">${pick ? "" : `<option value="" selected disabled>Choose a slot</option>`}${opts}</select>`;
+  }).join("");
+  el.innerHTML = loaded.length ? `<div class="map">${rows}</div><div class="warnline" id="pdWarn"></div>`
+    : `<div class="warnline">No spools detected in the box. Load filament or turn off "Use the Control Box".</div>`;
+  for (const s of el.querySelectorAll("select")) s.onchange = checkMap;
+  checkMap();
+}
+function checkMap() {
+  const sels = [...$("pdMap").querySelectorAll("select")];
+  const warn = $("pdWarn");
+  if (!$("pdBox").checked || !pd.tools.length) return;
+  const loaded = boxSlotList();
+  const notes = [];
+  let ok = sels.length > 0;
+  for (const s of sels) {
+    if (s.value === "") { ok = false; continue; }
+    const x = loaded[Number(s.value)], t = Number(s.dataset.t);
+    if (x && bigType(x.type) !== bigType(pd.types[t])) notes.push(`T${t} is ${pd.types[t]} but slot ${x.label} has ${x.type || "no type set"}.`);
+  }
+  if (!ok) notes.unshift("Choose a slot for every filament.");
+  if (warn) warn.textContent = notes.join(" ");
+  $("pdStart").disabled = !ok;
+}
+$("pdBox").onchange = () => {
+  gcode(`SAVE_VARIABLE VARIABLE=enable_box VALUE=${$("pdBox").checked ? 1 : 0}`).catch((e) => alert(e.message));
+  renderMap();
+};
+$("pdCancel").onclick = () => $("printDlg").close();
+$("pdStart").onclick = async () => {
+  $("pdStart").disabled = true;
+  try {
+    const st = await call("printer.objects.query", { objects: { print_stats: ["state"] } });
+    if (BUSY_STATES.includes(st.status.print_stats.state)) throw new Error("The printer is already printing.");
+    if ($("pdBox").checked) {
+      let lines;
+      if (pd.tools.length) lines = [...$("pdMap").querySelectorAll("select")].map((s) => `SAVE_VARIABLE VARIABLE=value_t${s.dataset.t} VALUE="'slot${s.value}'"`);
+      else lines = pd.colors.map((c, i) => `SAVE_VARIABLE VARIABLE=value_t${i} VALUE="'slot${i}'"`);
+      if (lines.length) await gcode(lines.join("\n"));
+    }
+    await call("printer.print.start", { filename: pd.filename });
+    $("printDlg").close();
+  } catch (e) { alert("Print not started: " + e.message); $("pdStart").disabled = false; }
+};
+
+// ---------- Cards: collapse state (camera always starts closed) ----------
+let closedCards = {};
+try { closedCards = JSON.parse(localStorage.getItem("closedCards") || "{}"); } catch (e) {}
+for (const card of document.querySelectorAll(".card")) {
+  const id = card.dataset.card;
+  if (id !== "camera" && closedCards[id]) card.classList.add("closed");
+  card.querySelector("header").addEventListener("click", () => {
+    card.classList.toggle("closed");
+    if (id !== "camera") {
+      closedCards[id] = card.classList.contains("closed");
+      try { localStorage.setItem("closedCards", JSON.stringify(closedCards)); } catch (e) {}
+    }
+    if (id === "camera") updateCamera();
+    if (id === "thermals") drawChart();
+    if (id === "console") $("log").scrollTop = $("log").scrollHeight;
+  });
+}
+window.addEventListener("resize", () => drawChart());
+
+function resetUi() {
+  for (const k in S) delete S[k];
+  slots.clear(); $("boxes").innerHTML = ""; $("fans").innerHTML = ""; $("thermRows").innerHTML = "";
+  metaCache.clear(); files = []; sensors = [];
+  updateCamera();
+}
+
+// Keep print buttons and camera in step with state changes.
+setInterval(() => { updatePrintButtons(); updateCamera(); }, 1000);
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Klipper/Moonraker configs and web files: always LF (the printer runs Linux)
+*.cfg   text eol=lf
+*.conf  text eol=lf
+*.gcode text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+# Windows launchers
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
