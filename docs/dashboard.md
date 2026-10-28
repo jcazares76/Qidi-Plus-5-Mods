@@ -1,11 +1,21 @@
 # Dashboard (`dashboard/`)
 
-A single-page, Fluidd-style dashboard for the QIDI Plus 5 that runs from your PC.
+A Fluidd-style dashboard for the QIDI Plus 5 that runs from your PC. There are two versions with the same
+features and look, served side by side:
+
+| URL | Version | Source |
+|---|---|---|
+| `http://localhost:8765/` | Original single-file page (plain HTML/JS) | [`dashboard/index.html`](../dashboard/index.html) |
+| `http://localhost:8765/ng/` | Angular 22 version (built output committed) | [`angular/`](../angular) → built into [`dashboard/ng/`](../dashboard/ng) |
+
+Both share the printer address and panel settings (same browser storage). Node.js is only needed to
+*change* the Angular version, not to run it – see [`angular/README.md`](../angular/README.md).
 
 ## Run it
 
 Double-click **`Open Dashboard.bat`**. It starts a tiny web server on `http://localhost:8765` (this PC only)
-and opens the page. Close the window to stop it.
+and opens the page. Close the window to stop it. To open the Angular version directly, run
+`serve.ps1 -Open ng/`.
 
 The first time, type your printer's IP address into the **Printer** box in the top bar. It's remembered in
 that browser. You can also open `http://localhost:8765/?printer=<printer-ip>`.
