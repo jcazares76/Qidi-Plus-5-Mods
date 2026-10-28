@@ -19,13 +19,25 @@ touching QIDI's own files.
 | [`dashboard/`](dashboard) | A Fluidd-style dashboard that runs from your PC: status, thermals, control box (slot editor, load/unload/eject, dryer), camera, console, fans/outputs, jobs. Built app in `dashboard/app/` |
 | [`angular/`](angular) | Angular 22 source of the dashboard (build output goes to `dashboard/app/`) |
 | [`orcaslicer/`](orcaslicer) | An OrcaSlicer printer profile with a "UPS safe" start G-code (heats one thing at a time to keep startup draw under ~1000 W) |
+| [`scripts/package.ps1`](scripts/package.ps1), [`.github/workflows/release.yml`](.github/workflows/release.yml) | Build the download-and-run zip; GitHub publishes it on each version tag (see [docs/releasing.md](docs/releasing.md)) |
 | [`docs/`](docs) | Install steps and everything learned about how the box and firmware work |
 
-## Quick start
+## Just want the dashboard? (no technical knowledge needed)
 
-1. **Install the macros** – see [docs/install.md](docs/install.md). One new file plus one `[include]` line in `printer.cfg`.
-2. **Run the dashboard** – double-click `dashboard/Open Dashboard.bat`, then enter your printer's IP address
-   in the top bar. See [docs/dashboard.md](docs/dashboard.md).
+1. Go to the [**Releases** page](https://github.com/jcazares76/Qidi-Plus-5-Mods/releases) and download
+   `QIDI-Plus-5-Dashboard-v<version>.zip`.
+2. Unzip it and double-click **`Open Dashboard.bat`**.
+3. Click **Find my printer**, then **Connect**.
+4. First time only: in the Control Box panel click **Set up slot editing** (it backs up your printer settings first).
+
+Step-by-step instructions are in `README-FIRST.txt` inside the zip. Windows 10/11, printer on the same network.
+
+## Quick start (from the repo)
+
+1. **Run the dashboard** – double-click `dashboard/Open Dashboard.bat`, click **Find my printer**.
+   See [docs/dashboard.md](docs/dashboard.md).
+2. **Install the macros** – one click in the dashboard (**Set up slot editing**), or by hand: see
+   [docs/install.md](docs/install.md). One new file plus one `[include]` line in `printer.cfg`.
 3. **OrcaSlicer (optional)** – import the profile in `orcaslicer/`. See [docs/orcaslicer.md](docs/orcaslicer.md).
 
 ## Docs

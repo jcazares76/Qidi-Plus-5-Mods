@@ -1,2 +1,4 @@
 # Local Claude Code tooling (dev server settings)
 .claude/
+# Packaged downloads (scripts/package.ps1)
+dist/

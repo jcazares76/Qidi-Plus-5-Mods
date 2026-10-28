@@ -1,5 +1,9 @@
 # Install and undo
 
+**Easiest:** open the dashboard and click **Set up slot editing** in the Control Box panel. It does steps 1–2
+below for you (backup, upload, include line, restart, check) and undoes them if anything fails – see
+[dashboard.md](dashboard.md#one-click-macro-setup). The manual steps below do the same thing by hand.
+
 Everything is done through Moonraker's web API or Fluidd's file manager. SSH is not needed.
 
 ## 1. Back up

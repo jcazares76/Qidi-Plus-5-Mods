@@ -60,6 +60,14 @@ QIDI's Fluidd build v1.30.5, as of October 2026.
   `/printer/info`; if it's `error`, re-upload the backup and `RESTART`.
 - On Windows, `curl.exe -F "file=@…"` silently uploads nothing when given a Git Bash style path (`/c/...`).
   Use a normal Windows path, and verify the upload by downloading the file again.
+- ⚠️ **QIDI's config files are UTF-8 with Chinese comments, and Moonraker serves them without a charset.**
+  Windows PowerShell 5's `Invoke-WebRequest` / `Invoke-RestMethod` then decode them as ISO-8859-1, so writing the
+  text back (`Set-Content`, `WriteAllText`, upload) **garbles every Chinese comment**. This happened once to
+  `printer.cfg` during testing (Klipper still ran – only comments were affected – and it was restored byte for
+  byte). Download and upload config files as **bytes**: `curl.exe -o file` / `curl.exe -F "file=@file"`, or
+  `-OutFile`, and compare uploads byte for byte. (Because ISO-8859-1 maps bytes 1:1, garbled text can be repaired
+  with `[Text.Encoding]::GetEncoding(28591).GetBytes($text)`.) Browsers' `fetch().text()` decode UTF-8 correctly,
+  so the dashboard's installer is not affected.
 
 ## Klipper and macro gotchas
 
@@ -327,7 +335,10 @@ Rules that came out of working on this machine:
    validate them (see the eject crash above).
 4. For heaters, use low temperatures and short times, and confirm they're off afterwards (target 0, power 0).
 5. Know the recovery: `RESTART`, and `FIRMWARE_RESTART` if a board is shut down.
-6. Back up any config file before uploading a change, and verify the upload.
+6. Back up any config file before uploading a change (as raw bytes – see the encoding warning under
+   [Access](#access-and-files)), and verify the upload byte for byte.
+7. Moonraker's `objects/query` returns an **empty entry** for objects that don't exist, so "is it there?" checks must
+   use `printer.objects.list` or look for real content (e.g. a macro's variables), not just the key.
 
 ## Open questions and untested
 

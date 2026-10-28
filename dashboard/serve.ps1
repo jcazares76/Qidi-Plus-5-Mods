@@ -33,6 +33,32 @@ function Send-File($res, $file) {
     $res.OutputStream.Write($bytes, 0, $bytes.Length)
 }
 
+function Send-Json($res, $obj) {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject @($obj) -Compress))
+    $res.ContentType = 'application/json'
+    $res.Headers.Add('Cache-Control', 'no-store')
+    $res.ContentLength64 = $bytes.Length
+    $res.OutputStream.Write($bytes, 0, $bytes.Length)
+}
+
+# This PC's IPv4 networks as "a.b.c" (the /24 the PC is in), real adapters first. Never leaves this PC.
+function Get-LocalNetworks {
+    $nets = @()
+    try {
+        $addrs = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+            Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' }
+        $up = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' })
+        foreach ($a in $addrs) {
+            $adapter = $up | Where-Object { $_.ifIndex -eq $a.InterfaceIndex } | Select-Object -First 1
+            if (-not $adapter) { continue }
+            $virtual = $adapter.InterfaceDescription -match 'Hyper-V|Virtual|VMware|VirtualBox|WSL|TAP|Loopback|Bluetooth'
+            $p = $a.IPAddress.Split('.')
+            $nets += [pscustomobject]@{ prefix = "$($p[0]).$($p[1]).$($p[2])"; virtual = [bool]$virtual }
+        }
+    } catch { }
+    $nets | Sort-Object virtual, prefix -Unique | ForEach-Object { $_.prefix } | Select-Object -Unique
+}
+
 try {
     while ($listener.IsListening) {
         $ctx = $listener.GetContext()
@@ -41,6 +67,8 @@ try {
             $path = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath)
             # Old address of the Angular version: send it to the main page (keeps ?printer=...).
             if ($path -eq '/ng' -or $path.StartsWith('/ng/')) { $res.Redirect('/' + $ctx.Request.Url.Query); continue }
+            # "Find my printer": tell the page which local networks this PC is on, so it only scans those.
+            if ($path -eq '/local-networks') { Send-Json $res (Get-LocalNetworks); continue }
             if ($path.EndsWith('/')) { $path += 'index.html' }
             $file = [System.IO.Path]::GetFullPath((Join-Path $root $path.TrimStart('/')))
             # Only serve files inside the app folder.

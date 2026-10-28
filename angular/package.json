@@ -1,12 +1,14 @@
 {
   "name": "qidi-dashboard",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "prebuild": "node -e \"require('fs').copyFileSync('../printer/box_slots.cfg','public/box_slots.cfg')\"",
+    "prestart": "node -e \"require('fs').copyFileSync('../printer/box_slots.cfg','public/box_slots.cfg')\""
   },
   "private": true,
   "packageManager": "npm@11.19.1",

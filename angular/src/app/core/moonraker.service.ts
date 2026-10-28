@@ -103,6 +103,7 @@ export class MoonrakerService {
     }
     this.connected.set(false);
     this.klippyState.set('disconnected');
+    this.klippyMessage.set('');
     this.status.set({});
     if (!host) return;
     let ws: WebSocket;
@@ -121,6 +122,7 @@ export class MoonrakerService {
     ws.onclose = () => {
       this.connected.set(false);
       this.klippyState.set('disconnected');
+      this.klippyMessage.set('');
       this.pending.forEach((p) => p.reject(new Error('Connection closed')));
       this.pending.clear();
       this.scheduleReconnect();
@@ -156,6 +158,7 @@ export class MoonrakerService {
         break;
       case 'notify_klippy_disconnected':
         this.klippyState.set('disconnected');
+        this.klippyMessage.set('');
         setTimeout(() => this.init().catch(() => {}), 2000);
         break;
       case 'notify_filelist_changed':

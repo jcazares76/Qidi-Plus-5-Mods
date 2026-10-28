@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Copied from ../printer/box_slots.cfg by the prebuild script (single source of truth is printer/)
+/public/box_slots.cfg

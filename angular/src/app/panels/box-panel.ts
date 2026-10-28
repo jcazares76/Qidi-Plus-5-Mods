@@ -4,16 +4,18 @@ import { hexOf, slotLabel } from '../core/format';
 import { MoonrakerService } from '../core/moonraker.service';
 import { Card } from '../shared/card';
 import { DryerControl } from './dryer-control';
+import { MacroSetup } from './macro-setup';
 import { SlotCard, SlotView } from './slot-card';
 
 /** QIDI Box: temperature, humidity, what's in the toolhead, and the slot editor. */
 @Component({
   selector: 'app-box-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Card, SlotCard, DryerControl],
+  imports: [Card, SlotCard, DryerControl, MacroSetup],
   template: `
     <app-card cardId="box" title="Control Box" [info]="headInfo()">
       <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" /><circle cx="7" cy="12.5" r="2.5" /><circle cx="17" cy="12.5" r="2.5" /><path d="M12 6v13" /></svg>
+      <app-macro-setup />
       @if (box(); as b) {
         <div class="boxinfo">
           <span>In toolhead:

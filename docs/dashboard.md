@@ -6,11 +6,18 @@ to *change* it, not to run it – see [`angular/README.md`](../angular/README.md
 
 ## Run it
 
-Double-click **`Open Dashboard.bat`**. It starts a tiny web server on `http://localhost:8765` (this PC only)
-and opens the page. Close the window to stop it. (The old address `/ng/` redirects to the main page.)
+Double-click **`Open Dashboard.bat`** (from the repo, or from the release zip – see [releasing.md](releasing.md)).
+It starts a tiny web server on `http://localhost:8765` (this PC only) and opens the page. Close the window to stop
+it. (The old address `/ng/` redirects to the main page.)
 
-The first time, type your printer's IP address into the **Printer** box in the top bar. It's remembered in
-that browser. You can also open `http://localhost:8765/?printer=<printer-ip>`.
+**Connect to the printer:** click **Find my printer**. The launcher tells the page which local network(s) the PC
+is on (`/local-networks`, real adapters before virtual ones like VirtualBox/Hyper-V), and the page checks each
+address on that network for Moonraker (`http://<ip>:7125/printer/info`, 48 at a time, 1.5 s timeout) – about
+10 seconds for a home network. Pick a printer and click **Connect**. You can also type the IP address into the
+**Printer** box, or open `http://localhost:8765/?printer=<printer-ip>`. The address is remembered in that browser.
+
+**First time on a printer:** if the box macros aren't installed, the Control Box panel shows
+**Set up slot editing** (see [one-click macro setup](#one-click-macro-setup)).
 
 **Why a local server:** Moonraker's existing CORS setting already allows pages from `localhost`, but blocks
 pages opened straight from a file. Serving from localhost means no printer setting has to change.
@@ -55,6 +62,30 @@ All panels collapse; the open/closed state is remembered (except Camera).
   output pins as switches (`SET_PIN`; beeper hidden; polar cooler hidden when not enabled). The case light is
   also driven by QIDI's "smart" light logic, so the printer may switch it by itself.
 - **Jobs** – files (newest first, thumbnails, time/weight/types) and history with Reprint.
+
+## One-click macro setup
+
+The app carries its own copy of [`printer/box_slots.cfg`](../printer/box_slots.cfg) (copied in at build time).
+The Control Box panel compares it with the printer:
+
+- **Macros not loaded** → "Slot editing isn't set up" with **Set up slot editing**.
+- **Loaded but different from the app's copy** → "A newer version of the slot macros is available" with
+  **Update macros**.
+- **Same** → nothing shown.
+
+Clicking first shows exactly what will happen (backup name, the line to add and where, restart), then:
+
+1. Checks the printer is idle.
+2. Saves `printer.cfg` as `printer-<date>_<time>-before-slot-editing.cfg.bak` in the config folder.
+3. Uploads `box_slots.cfg` and reads it back to verify.
+4. If `printer.cfg` doesn't load it yet, adds `[include box_slots.cfg]` right after `[include box.cfg]`
+   (or before the auto-saved SAVE_CONFIG block if that line isn't there) – nothing else is touched – and verifies.
+5. `RESTART`s Klipper and waits up to 2 minutes for it to be ready.
+6. Checks the macros actually loaded.
+
+If any step after the upload fails, it puts the original `printer.cfg` (and the previous `box_slots.cfg`, if
+there was one) back and restarts Klipper again, then says what happened. Tested on hardware: macros removed →
+**Set up slot editing** → include line added back at the same place, Klipper ready, macros loaded.
 
 ## Printing with the box
 
