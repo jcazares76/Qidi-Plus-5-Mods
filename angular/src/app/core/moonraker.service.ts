@@ -70,7 +70,8 @@ export class MoonrakerService {
     return `http://${this.settings.host()}:7125${path}`;
   }
 
-  call<T = any>(method: string, params: object = {}): Promise<T> {
+  /** JSON-RPC call. `timeoutMs` = how long to wait for the reply before giving up (the command keeps running). */
+  call<T = any>(method: string, params: object = {}, timeoutMs = 30_000): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return reject(new Error('Not connected to the printer'));
       const id = ++this.rpcId;
@@ -79,14 +80,18 @@ export class MoonrakerService {
       setTimeout(() => {
         if (this.pending.has(id)) {
           this.pending.delete(id);
-          reject(new Error('Timed out'));
+          reject(new Error(`No reply after ${Math.round(timeoutMs / 1000)} s – the printer may still be working; check the Console`));
         }
-      }, 30000);
+      }, timeoutMs);
     });
   }
 
-  gcode(script: string): Promise<string> {
-    return this.call('printer.gcode.script', { script });
+  /**
+   * Run G-code. Moonraker only replies when the command has finished, and printer commands can take minutes
+   * (heating, homing, box load/unload ~2 min), so the default wait is 10 minutes.
+   */
+  gcode(script: string, timeoutMs = 600_000): Promise<string> {
+    return this.call('printer.gcode.script', { script }, timeoutMs);
   }
 
   private connect(host: string): void {

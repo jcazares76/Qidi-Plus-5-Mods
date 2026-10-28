@@ -168,7 +168,9 @@ LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament from the slot to the toolhead
 - `LOAD_FILAMENT_CONTROL` without arguments: `// Error: Missing SLOT parameter.` (same signature as the others).
 - **Load, tested** (slot 4 = `SLOT=3`, PLA, nothing in the toolhead, X/Y already homed): about 100 s in total.
   1. Nozzle target set to **280 °C – even for PLA** (PLA's range is 190–240 °C); reached in ~60 s from 40 °C.
-     One test only, but it looks like a fixed QIDI load temperature.
+     The log only says "Heater extruder within range of 280.000". 280 °C equals the highest `max_temp` of any
+     spool in the box at the time (ABS and ASA: 280; PLA: 240), so the inferred rule is "hottest filament in the
+     box" (or a fixed 280). Unload used the slot's own `max_temp` (240). Not confirmed.
   2. `loaded_slot` switched from `slot16` to `slot3` (~65 s); the toolhead sensor (`filament_detected`) went true
      ~15 s later.
   3. Nozzle held at 280 °C ~20 s more (inferred: purge), then target 0 and `// Flow completed successfully.`
@@ -325,8 +327,9 @@ Rules that came out of working on this machine:
 
 ## Open questions and untested
 
-- Load / unload temperatures: Load used 280 °C and Unload 240 °C for the same PLA spool. Is Load's 280 °C fixed,
-  and does Unload use the filament's `max_temp`? (One test each so far.)
+- Load / unload temperatures: Load used 280 °C and Unload 240 °C for the same PLA spool. Is Load's 280 °C fixed or
+  the hottest spool in the box, and does Unload use the slot's `max_temp`? Does `LOAD_FILAMENT_CONTROL` accept a
+  temperature parameter (e.g. `HOTENDTEMP=`, as `BOX_PRINT_START` does)? (One test each so far.)
   Does Load move the toolhead to the purge/trash position (X/Y were already homed in the test)?
 - `RFID_READ`, `READ_RFID`, `INIT_RFID_READ`, `UPDATE_FILAMENT_INFORMATION` – parameters
   and effects not tested.
