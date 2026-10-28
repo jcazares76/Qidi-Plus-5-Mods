@@ -5,7 +5,7 @@ ${n.map((r,o)=>`${o+1}) ${r.toString()}`).join(`
 
 The printer heats the nozzle to about 280 \xB0C (even for PLA), feeds the filament from the box to the toolhead and purges. Takes about 2 minutes.`,unload:`Unload ${o}?
 
-The filament is pulled out of the toolhead and parked in the tube, ready to load again.`,eject:`Eject ${o}?
+The printer heats the nozzle (to about 240 \xB0C for PLA), pulls the filament out of the toolhead and parks it in the tube, ready to load again. Takes about 1\xBD minutes.`,eject:`Eject ${o}?
 
 The filament is pulled all the way out of the box feeder so you can remove the spool.`},s={load:["Loading\u2026","Loaded."],unload:["Unloading\u2026","Unloaded."],eject:["Ejecting\u2026","Ejected."]};if(confirm(i[t]+`
 

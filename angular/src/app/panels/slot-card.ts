@@ -175,7 +175,7 @@ export class SlotCard {
     const v = this.view(), what = `slot ${v.key} (${this.filName()})`;
     const texts: Record<FilamentOp, string> = {
       load: `Load ${what}?\n\nThe printer heats the nozzle to about 280 °C (even for PLA), feeds the filament from the box to the toolhead and purges. Takes about 2 minutes.`,
-      unload: `Unload ${what}?\n\nThe filament is pulled out of the toolhead and parked in the tube, ready to load again.`,
+      unload: `Unload ${what}?\n\nThe printer heats the nozzle (to about 240 °C for PLA), pulls the filament out of the toolhead and parks it in the tube, ready to load again. Takes about 1½ minutes.`,
       eject: `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`,
     };
     const doing: Record<FilamentOp, [string, string]> = {

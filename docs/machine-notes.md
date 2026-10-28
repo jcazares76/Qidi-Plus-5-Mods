@@ -95,7 +95,7 @@ box's slot 1); the box label, slicers and this repo's macros use 1-based numbers
 |---|---|---|
 | `filament_slot<N>` | QIDI filament ID (string) | `'QFA00'` = PLA Basic |
 | `color_slot<N>` | color as a one-item list of hex | `['FAFAFA']` |
-| `slot<N>` | slot state: `0` empty, `1` spool present, `3` filament re-inserted after an eject | `1` |
+| `slot<N>` | slot state: `0` empty, `1` spool present / parked ready, `2` loaded in the toolhead, `3` in the tube but not at the ready position (seen briefly during unload, and after re-inserting filament following an eject) | `1` |
 | `vendor_slot<N>` | legacy, appears unused | `1` |
 | `value_t<T>` | tool → slot mapping used when printing | `'slot2'` |
 | `enable_box` | `1` = print from the box, `0` = external spool | `1` |
@@ -172,7 +172,15 @@ LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament from the slot to the toolhead
   2. `loaded_slot` switched from `slot16` to `slot3` (~65 s); the toolhead sensor (`filament_detected`) went true
      ~15 s later.
   3. Nozzle held at 280 °C ~20 s more (inferred: purge), then target 0 and `// Flow completed successfully.`
-  Klipper stayed ready. Afterwards the dashboard correctly showed slot 4 "In toolhead" with Unload available.
+  Klipper stayed ready. Afterwards the dashboard correctly showed slot 4 "In toolhead" with Unload available,
+  and the saved `slot3` flag was `2` (loaded).
+- **Unload, tested** (right after the Load above, slot 4 = `SLOT=3`, PLA): about 75 s in total.
+  1. Nozzle target set to **240 °C** (PLA's upper limit – unlike Load's 280 °C); reached in ~30 s from 120 °C.
+  2. Held ~20 s, then the toolhead sensor went false (~52 s): filament out of the extruder.
+  3. Saved `slot3` went `2` → `3` (~55 s) → `1` (~66 s), and `loaded_slot` went back to `slot16` (nothing loaded).
+  4. Target 0 and `// Flow completed successfully.` Klipper stayed ready.
+  The spool stayed in the slot (`runout_button` 0, `box_inserted_3` 1), parked ready to load again. The dashboard
+  then showed "In toolhead: nothing" and Load available on every slot again.
 - QIDI's wiki: unload all filament from the feeder before drying.
 
 ## QIDI Box: filament dryer
@@ -317,8 +325,8 @@ Rules that came out of working on this machine:
 
 ## Open questions and untested
 
-- `UNLOAD_FILAMENT_CONTROL` on a really loaded spool (should park it in the tube) – not yet run on hardware.
-- Load temperature: is 280 °C fixed, or taken from the box or filament settings? (One PLA test so far.)
+- Load / unload temperatures: Load used 280 °C and Unload 240 °C for the same PLA spool. Is Load's 280 °C fixed,
+  and does Unload use the filament's `max_temp`? (One test each so far.)
   Does Load move the toolhead to the purge/trash position (X/Y were already homed in the test)?
 - `RFID_READ`, `READ_RFID`, `INIT_RFID_READ`, `UPDATE_FILAMENT_INFORMATION` – parameters
   and effects not tested.
