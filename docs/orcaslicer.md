@@ -16,6 +16,11 @@ startup draw stays under ~1000 W (useful on a UPS or a shared circuit):
 
 Rated heaters for reference: nozzle 150 W, bed 500 W, chamber 550 W, box heater 245 W.
 
+After the nozzle is at temperature (right after `ENABLE_ALL_SENSOR`), the profile runs `AUTO_BOX_TEMP`, which
+heats the QIDI Box automatically for the spools loaded – Orca has no box temperature setting of its own. See
+[box-slot-macros.md](box-slot-macros.md#auto_box_temp--box-temperature-during-a-print). It needs the repo's
+`box_slots.cfg` on the printer (the dashboard's **Set up slot editing** / **Update macros** installs it).
+
 It also **hard-codes the slot mapping** at the very top:
 
 ```gcode

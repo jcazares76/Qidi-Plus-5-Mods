@@ -118,6 +118,8 @@ M1006 Z{10 - ((nozzle_temperature_initial_layer[initial_tool] - 130) / 14 - 5.0)
 G0 Y-1
 M109 S[nozzle_temperature_initial_layer]
 ENABLE_ALL_SENSOR
+; QIDI Box heats to the lowest drying limit of the spools in it (off with PLA) - needs box_slots.cfg
+AUTO_BOX_TEMP
 ;===== PRINT_START =====
 ; LAYER_HEIGHT: 0.2
 T[initial_tool]

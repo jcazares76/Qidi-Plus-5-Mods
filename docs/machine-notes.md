@@ -87,7 +87,7 @@ QIDI's Fluidd build v1.30.5, as of October 2026.
 | `SMART_STATUS 状态更新: MODE=… SCREEN=…` | QIDI's screen/print state sync |
 | `[smart_output_pin caselight] 照明同步 … -> LIGHT=ON/OFF` | Automatic case light logic (see [lights](#fans-lights-and-outputs)) |
 | `[neopixel RGB] UI_EVENT: Mode=Smart, Screen=Sleep…` | Automatic LED strip logic |
-| `1C did not recognize the filament` | After a restart: the RFID reader found no QIDI tag on that slot's spool (normal for non-QIDI or untagged spools) |
+| `1C did not recognize the filament` | The RFID reader found no QIDI tag on that slot's spool (normal for non-QIDI or untagged spools). Appears after restarts and sometimes after box commands |
 | `Run Current: 0.90A Hold Current: 0.90A` / `1.07A` | Motor current switching during box/filament moves |
 | `Flow completed successfully.` | A box flow (unload, eject, …) finished |
 | `Sub status 'chamber_heating' not valid for main status 'print_start'` | Harmless status-name mismatch in QIDI's start sequence |
@@ -225,12 +225,24 @@ BOX_STOP_DRYING BOX=<n>
   ```
   and the stock end G-code has `DISABLE_BOX_HEATER`.
 - **OrcaSlicer has none of this** (checked the 2.5.0 nightly and Orca's main-branch source): no box temperature
-  setting, and it never writes `BOX_TEMP_SET`. Prints sliced in Orca never heat the box unless the G-code is added
-  by hand (filament or machine start G-code).
-- `BOX_TEMP_SET` with no arguments: no reply. `SET_BOX_TEMP_CONTROL` with none: `// Error: Missing parameters.`
-  `DISABLE_BOX_HEATER`: no reply. (These three were sent once by mistake **during a print**, with the box heater
-  already off: the print continued normally and nothing changed.) The exact multi-filament syntax of
-  `BOX_TEMP_SET` and what `SET_BOX_TEMP_CONTROL` takes are **not confirmed yet**.
+  setting, and it never writes `BOX_TEMP_SET`. Prints sliced in Orca never heat the box on their own.
+- **Solution used here:** the `AUTO_BOX_TEMP` macro in `box_slots.cfg`, called from the Orca start G-code – see
+  [box-slot-macros.md](box-slot-macros.md#auto_box_temp--box-temperature-during-a-print).
+- Tested on the idle printer:
+  - `BOX_TEMP_SET VT0=40`, `VT0=40 VT1=35`, `VT1=35`: accepted, but **nothing heats** when idle (heater target stays
+    0; the first call replied "Flow completed successfully"). It appears to *store* per-tool box temperatures that
+    QIDI's print flow (`BOX_PRINT_START`) applies; no stored value is visible in any object.
+  - **`SET_HEATER_TEMPERATURE HEATER=heater_box1 TARGET=<°C>` works directly**: target set, power 100 %,
+    `box_extras` `box_target_temp` follows. `TARGET=0` turns it off.
+  - **`DISABLE_BOX_HEATER` does not clear** a target set with `SET_HEATER_TEMPERATURE` (target stayed 35).
+  - `BOX_TEMP_SET` / `DISABLE_BOX_HEATER` with no arguments: no reply. `SET_BOX_TEMP_CONTROL` with none:
+    `// Error: Missing parameters.` (These three were also sent once by mistake **during a print**, with the box
+    heater already off: the print continued normally and nothing changed.)
+  - `AUTO_BOX_TEMP` with ABS, PA12-CF and two PLA spools loaded → heater off (PLA). `SLOTS=1` (ABS) → 45 °C.
+    Watcher switched it off ~50 s later (not printing). `OFF=1` works.
+- Not confirmed: what `SET_BOX_TEMP_CONTROL` takes; whether QIDI's own flows (tool changes, `BOX_PRINT_START`)
+  ever override a box target set during a print – check the box heater stays on during a real print.
+- Per-filament limits seen: ABS Rapido 45, ASA 45, PETG (Generic) 45, PA12-CF 65, PLA 0.
 
 ---
 

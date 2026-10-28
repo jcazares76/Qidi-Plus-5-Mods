@@ -61,4 +61,4 @@ export const SENSOR_ORDER = ['extruder', 'heater_bed', 'heater_generic chamber',
 export const TOOL_SENSOR = 'filament_switch_sensor filament_switch_sensor';
 
 /** App version – keep in sync with package.json (scripts/package.ps1 checks). */
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';

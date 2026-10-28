@@ -141,9 +141,10 @@ they'd then fail in QIDI Studio.
   them the same way.
 - **No box temperature during prints.** QIDI Studio's filament profiles have a "box temperature" and QIDI Studio
   writes `DISABLE_BOX_HEATER` + `BOX_TEMP_SET VT0=<°C> …` into every print. Orca has no such setting and writes
-  nothing, so the box never heats during an Orca print. Workaround (being worked out): add the command to the Orca
-  filament or printer start G-code – see
-  [machine-notes.md](machine-notes.md#qidi-box-temperature-during-a-print).
+  nothing, so the box never heats during an Orca print. **Fix:** add the line `AUTO_BOX_TEMP` to the Orca printer's
+  start G-code after the nozzle has reached temperature (needs this repo's `box_slots.cfg`). It picks the box
+  temperature automatically from the spools in the box – nothing to enter per print. See
+  [box-slot-macros.md](box-slot-macros.md#auto_box_temp--box-temperature-during-a-print).
 - Unconfirmed: whether Orca's "Sync filament" reads the box's slot data correctly.
 
 ## 8. Check your first slice

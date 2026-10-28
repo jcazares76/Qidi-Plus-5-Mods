@@ -32,6 +32,32 @@ spool are shown as `empty (last set: …)`, because the stored type/color stays 
 
 Lists the accepted `FILAMENT` names with their IDs, and the color names.
 
+## `AUTO_BOX_TEMP` – box temperature during a print
+
+OrcaSlicer has no box temperature setting, so the box never heats during an Orca print. Add one line to the
+slicer's **start G-code, after the nozzle has reached temperature** (the included Orca profile has it right after
+`ENABLE_ALL_SENSOR`):
+
+```
+AUTO_BOX_TEMP
+```
+
+Nothing to enter per print – it works it out from the spools in the box:
+
+- Looks at every spool **physically in the box** (the heat reaches all of them, used or not).
+- Uses QIDI's own drying limit for each filament (`box_max_temp` from the printer's material database,
+  e.g. ABS/ASA 45 °C, PA12-CF 65 °C).
+- Sets the box to the **lowest** of those limits. If any spool has no limit – QIDI uses 0, e.g. for PLA – the
+  heater stays **off** (QIDI's own rule: no box heating with PLA inside).
+- Replies on the console, e.g. `AUTO_BOX_TEMP box 1: slot 1 ABS Rapido max 45 C, slot 3 PLA Basic no box heating -> heater off`.
+- A watcher turns the box heater **off within a minute once no print is running** – after a finished, cancelled
+  or failed print. (QIDI's `DISABLE_BOX_HEATER` in the end G-code does *not* switch off a heater set this way.)
+
+Options: `SLOTS=1,2` only consider those slots, `MAX=40` cap the temperature, `OFF=1` turn the box heater off now.
+
+Why it's after the nozzle heats: the box heater is ~245 W; starting it then keeps the startup power peak low
+(see the UPS-safe start G-code in [orcaslicer.md](orcaslicer.md)).
+
 ## Filament IDs
 
 Taken from QIDI Studio's profiles (`resources/profiles/Q Series/filament/*.json`, field `filament_id`).
