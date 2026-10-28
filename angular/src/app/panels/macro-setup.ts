@@ -17,15 +17,24 @@ import { MoonrakerService } from '../core/moonraker.service';
             Your printer settings are backed up first, and put back automatically if anything goes wrong.
           </div>
         } @else if (inst.state() === 'outdated' && !inst.busy()) {
-          <div><b>A newer version of the slot macros is available.</b></div>
+          <div><b>A newer version of the slot macros is available</b>
+            <span class="muted">(version {{ inst.versions().app }}; the printer has {{ inst.versions().printer }}).</span></div>
+        } @else if (inst.state() === 'newer') {
+          <div><b>The printer has newer slot macros (version {{ inst.versions().printer }}) than this dashboard
+            (version {{ inst.versions().app }}).</b></div>
+          <div class="muted" style="font-size:12px;margin-top:4px">
+            Get the latest dashboard from the project's Releases page – this one won't change the printer's macros.
+          </div>
         }
         @if (inst.progress()) { <div class="msg" style="margin:4px 0">{{ inst.progress() }}</div> }
-        <div class="row">
-          <button class="btn primary" [disabled]="!!blocked() || inst.busy()" [title]="blocked() || ''" (click)="run()">
-            {{ inst.busy() ? 'Working…' : inst.state() === 'outdated' ? 'Update macros' : 'Set up slot editing' }}
-          </button>
-          @if (blocked(); as b) { <span class="muted" style="font-size:12px">{{ b }}</span> }
-        </div>
+        @if (inst.state() !== 'newer') {
+          <div class="row">
+            <button class="btn primary" [disabled]="!!blocked() || inst.busy()" [title]="blocked() || ''" (click)="run()">
+              {{ inst.busy() ? 'Working…' : inst.state() === 'outdated' ? 'Update macros' : 'Set up slot editing' }}
+            </button>
+            @if (blocked(); as b) { <span class="muted" style="font-size:12px">{{ b }}</span> }
+          </div>
+        }
       </div>
     }
   `,
@@ -40,7 +49,7 @@ export class MacroSetup {
 
   private readonly lastMsgVisible = signal(false);
   protected readonly show = computed(() =>
-    this.inst.busy() || this.inst.state() === 'missing' || this.inst.state() === 'outdated' || this.lastMsgVisible());
+    this.inst.busy() || ['missing', 'outdated', 'newer'].includes(this.inst.state()) || this.lastMsgVisible());
   protected readonly blocked = computed((): string | null => {
     if (this.mr.klippyState() !== 'ready' && !this.inst.busy()) return 'Printer not ready.';
     if (BUSY_STATES.includes(this.mr.printState())) return 'Not while printing.';

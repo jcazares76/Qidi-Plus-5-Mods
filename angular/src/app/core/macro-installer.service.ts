@@ -1,7 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { MoonrakerService } from './moonraker.service';
 
-export type MacroState = 'unknown' | 'missing' | 'installed' | 'outdated';
+/** missing = not loaded; outdated = the app's copy is newer; newer = the printer's copy is newer than the app's. */
+export type MacroState = 'unknown' | 'missing' | 'installed' | 'outdated' | 'newer';
+
+/** `variable_version: N` in [gcode_macro _BOX_SLOT_DATA]; files from before versioning count as 1. */
+export function macroVersion(text: string | null): number {
+  const m = /^variable_version:\s*(\d+)/m.exec(text ?? '');
+  return m ? Number(m[1]) : 1;
+}
 
 export interface InstallPlan {
   printerCfg: string;
@@ -25,6 +32,8 @@ export class MacroInstallerService {
   private readonly mr = inject(MoonrakerService);
 
   readonly state = signal<MacroState>('unknown');
+  /** Macro file versions: the app's bundled copy and the printer's (0 = none on the printer). */
+  readonly versions = signal({ app: 0, printer: 0 });
   readonly busy = signal(false);
   readonly progress = signal('');
 
@@ -58,9 +67,12 @@ export class MacroInstallerService {
   async check(): Promise<void> {
     try {
       const loaded = !!this.mr.status()['gcode_macro _BOX_SLOT_DATA'];
-      if (!loaded) { this.state.set('missing'); return; }
       const [mine, theirs] = await Promise.all([this.bundled(), this.download('box_slots.cfg')]);
-      this.state.set(norm(mine) === norm(theirs) ? 'installed' : 'outdated');
+      const app = macroVersion(mine), printer = theirs == null ? 0 : macroVersion(theirs);
+      this.versions.set({ app, printer });
+      if (!loaded) { this.state.set(printer > app ? 'newer' : 'missing'); return; }
+      // Compare versions, never contents: a dashboard must not "update" a printer to an older file.
+      this.state.set(app > printer ? 'outdated' : app < printer ? 'newer' : 'installed');
     } catch {
       this.state.set('unknown');
     }
@@ -98,8 +110,14 @@ export class MacroInstallerService {
     this.busy.set(true);
     let changed = false, succeeded = false;
     try {
-      const st = await this.mr.call('printer.objects.query', { objects: { print_stats: ['state'] } });
+      const st = await this.mr.call('printer.objects.query', { objects: { print_stats: ['state'], multi_color_controller: ['task'] } });
       if (!IDLE_STATES.includes(st.status.print_stats.state)) throw new Error('The printer is busy (printing or paused).');
+      const task = st.status.multi_color_controller?.task;
+      if (task && (task.flow_id != null || task.current_queue?.length)) throw new Error('The box is busy (loading, unloading or changing filament).');
+      const appVersion = macroVersion(await this.bundled());
+      if (plan.hadMacroFile != null && macroVersion(plan.hadMacroFile) > appVersion) {
+        throw new Error(`The printer already has newer macros (version ${macroVersion(plan.hadMacroFile)}) than this dashboard (version ${appVersion}).`);
+      }
 
       this.step(`Backing up printer.cfg as ${plan.backupName}…`);
       await this.upload(plan.backupName, plan.printerCfg);

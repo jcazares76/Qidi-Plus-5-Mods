@@ -8,6 +8,10 @@ the built app (`app/`), `serve.ps1`, `Open Dashboard.bat` and `README-FIRST.txt`
 1. Bump the version in **both** places (the packaging script refuses to run if they differ):
    - `angular/package.json` → `"version"`
    - `angular/src/app/core/constants.ts` → `APP_VERSION` (shown in the dashboard's top bar)
+
+   **If `printer/box_slots.cfg` changed, also raise `variable_version`** in its `[gcode_macro _BOX_SLOT_DATA]`
+   section. The dashboard compares that number to decide whether to offer **Update macros**; without a bump,
+   printers won't be offered the new macros.
 2. Build and check locally:
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts/package.ps1
@@ -27,7 +31,8 @@ the built app (`app/`), `serve.ps1`, `Open Dashboard.bat` and `README-FIRST.txt`
 
 - `printer/box_slots.cfg` is the single source of the macros. The build copies it into the app so the
   dashboard's **Set up slot editing** / **Update macros** button installs exactly that version. Changing the
-  macros means a new release; users then see "A newer version of the slot macros is available".
+  macros means a new release (and a `variable_version` bump); users then see "A newer version of the slot macros
+  is available". A dashboard never installs a lower version than the printer has.
 - The zip is Windows-only (the launcher is PowerShell). Downloaded `.bat` files can trigger a Windows
   SmartScreen or "Security Warning" prompt; `README-FIRST.txt` explains how to continue.
 - Keep personal information out of releases too (see [CLAUDE.md](../CLAUDE.md)).

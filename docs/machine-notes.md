@@ -240,6 +240,10 @@ BOX_STOP_DRYING BOX=<n>
     heater already off: the print continued normally and nothing changed.)
   - `AUTO_BOX_TEMP` with ABS, PA12-CF and two PLA spools loaded → heater off (PLA). `SLOTS=1` (ABS) → 45 °C.
     Watcher switched it off ~50 s later (not printing). `OFF=1` works.
+- First real print with `AUTO_BOX_TEMP` in the Orca start G-code: the macro had been **removed** shortly before
+  (dashboard v1.0.0's **Update macros** reinstalled its older `box_slots.cfg`), so Klipper silently skipped the
+  unknown `AUTO_BOX_TEMP` line and the print continued normally. Since then `box_slots.cfg` carries
+  `variable_version` and dashboards never install a lower version.
 - Not confirmed: what `SET_BOX_TEMP_CONTROL` takes; whether QIDI's own flows (tool changes, `BOX_PRINT_START`)
   ever override a box target set during a print – check the box heater stays on during a real print.
 - Per-filament limits seen: ABS Rapido 45, ASA 45, PETG (Generic) 45, PA12-CF 65, PLA 0.

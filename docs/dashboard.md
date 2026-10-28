@@ -66,12 +66,19 @@ All panels collapse; the open/closed state is remembered (except Camera).
 ## One-click macro setup
 
 The app carries its own copy of [`printer/box_slots.cfg`](../printer/box_slots.cfg) (copied in at build time).
-The Control Box panel compares it with the printer:
+The Control Box panel compares the **version number** of that copy (`variable_version` in `_BOX_SLOT_DATA`;
+files without one count as 1) with the printer's:
 
 - **Macros not loaded** → "Slot editing isn't set up" with **Set up slot editing**.
-- **Loaded but different from the app's copy** → "A newer version of the slot macros is available" with
+- **App's copy is newer** → "A newer version of the slot macros is available (version X; the printer has Y)" with
   **Update macros**.
-- **Same** → nothing shown.
+- **Printer's copy is newer** → "The printer has newer slot macros … than this dashboard" and **no button** – it
+  never downgrades. Get the latest dashboard instead.
+- **Same version** → nothing shown.
+
+⚠️ Dashboard **v1.0.0** compared file *contents* instead, so it offers to "update" a printer that has newer macros –
+which installs the **older** file (this removed `AUTO_BOX_TEMP` once). Don't use v1.0.0's **Update macros**; use
+v1.1.0 or later.
 
 Clicking first shows exactly what will happen (backup name, the line to add and where, restart), then:
 
