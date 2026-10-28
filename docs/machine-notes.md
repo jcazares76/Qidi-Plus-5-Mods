@@ -166,6 +166,13 @@ LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament from the slot to the toolhead
   load when the spool is present and that slot isn't already loaded. The dashboard uses the same rules and also
   requires nothing else to be loaded before Load.
 - `LOAD_FILAMENT_CONTROL` without arguments: `// Error: Missing SLOT parameter.` (same signature as the others).
+- **Load, tested** (slot 4 = `SLOT=3`, PLA, nothing in the toolhead, X/Y already homed): about 100 s in total.
+  1. Nozzle target set to **280 °C – even for PLA** (PLA's range is 190–240 °C); reached in ~60 s from 40 °C.
+     One test only, but it looks like a fixed QIDI load temperature.
+  2. `loaded_slot` switched from `slot16` to `slot3` (~65 s); the toolhead sensor (`filament_detected`) went true
+     ~15 s later.
+  3. Nozzle held at 280 °C ~20 s more (inferred: purge), then target 0 and `// Flow completed successfully.`
+  Klipper stayed ready. Afterwards the dashboard correctly showed slot 4 "In toolhead" with Unload available.
 - QIDI's wiki: unload all filament from the feeder before drying.
 
 ## QIDI Box: filament dryer
@@ -311,7 +318,8 @@ Rules that came out of working on this machine:
 ## Open questions and untested
 
 - `UNLOAD_FILAMENT_CONTROL` on a really loaded spool (should park it in the tube) – not yet run on hardware.
-- `LOAD_FILAMENT_CONTROL SLOT=<i>` on hardware (whether it heats/purges, how long it takes) – not yet run.
+- Load temperature: is 280 °C fixed, or taken from the box or filament settings? (One PLA test so far.)
+  Does Load move the toolhead to the purge/trash position (X/Y were already homed in the test)?
 - `RFID_READ`, `READ_RFID`, `INIT_RFID_READ`, `UPDATE_FILAMENT_INFORMATION` – parameters
   and effects not tested.
 - Full-length box drying session (only short start/stop tests so far).
