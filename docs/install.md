@@ -17,7 +17,8 @@ This repo only contains the files that change; everything else stays as QIDI shi
    [include box_slots.cfg]         # computer-side box slot editing (SET_SLOT_FILAMENT)
    ```
 
-   That is the only change to `printer.cfg` ([reference copy](../printer/printer.cfg) – don't overwrite your
+   That is the only change to `printer.cfg` ([modified copy](../printer/printer.cfg),
+   [original](../printer/original/printer.cfg) – don't overwrite your
    own `printer.cfg` with it; your printer's calibration section is at the end of yours). Nothing else in
    QIDI's files is modified, and `moonraker.conf` is not changed.
 3. Save, then send `RESTART` from the console. **Use `RESTART`, not `FIRMWARE_RESTART`** – on this printer

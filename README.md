@@ -15,6 +15,7 @@ touching QIDI's own files.
 |---|---|
 | [`printer/box_slots.cfg`](printer/box_slots.cfg) | Klipper macros to set/list box slot filament and color (`SET_SLOT_FILAMENT`, `LIST_SLOT_FILAMENTS`, `LIST_FILAMENT_TYPES`) |
 | [`printer/printer.cfg`](printer/printer.cfg) | QIDI's `printer.cfg` with the one added line (`[include box_slots.cfg]` after `[include box.cfg]`), for reference. The printer's auto-saved calibration section is left out |
+| [`printer/original/printer.cfg`](printer/original/printer.cfg) | QIDI's stock `printer.cfg` without any mods, for comparison and undo (same calibration section left out) |
 | [`dashboard/`](dashboard) | A Fluidd-style dashboard that runs from your PC: status, thermals, control box, camera, console, fans/outputs, jobs |
 | [`orcaslicer/`](orcaslicer) | An OrcaSlicer printer profile with a "UPS safe" start G-code (heats one thing at a time to keep startup draw under ~1000 W) |
 | [`docs/`](docs) | Install steps and everything learned about how the box and firmware work |
