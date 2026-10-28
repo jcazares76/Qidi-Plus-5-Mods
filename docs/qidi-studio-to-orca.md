@@ -139,6 +139,11 @@ they'd then fail in QIDI Studio.
 - **Upload and Print doesn't set the box slot mapping** (see step 3).
 - Print files keep the `.gcode.3mf` format with plate thumbnails, so the printer, touchscreen and dashboard show
   them the same way.
+- **No box temperature during prints.** QIDI Studio's filament profiles have a "box temperature" and QIDI Studio
+  writes `DISABLE_BOX_HEATER` + `BOX_TEMP_SET VT0=<°C> …` into every print. Orca has no such setting and writes
+  nothing, so the box never heats during an Orca print. Workaround (being worked out): add the command to the Orca
+  filament or printer start G-code – see
+  [machine-notes.md](machine-notes.md#qidi-box-temperature-during-a-print).
 - Unconfirmed: whether Orca's "Sync filament" reads the box's slot data correctly.
 
 ## 8. Check your first slice

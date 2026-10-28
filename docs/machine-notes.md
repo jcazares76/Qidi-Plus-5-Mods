@@ -210,10 +210,27 @@ BOX_STOP_DRYING BOX=<n>
 - QIDI's wiki: close the lid; trays rotate every 5 minutes (`box_drying_roll_enable`); box fans start above 35 °C;
   open the rear vent for a while after an hour or two to let moisture out, then close it. Spec max 65 °C.
 - PLA: `box_max_temp` 0 – QIDI disables *manual* box heating with PLA loaded (auto drying still rotates spools).
-- Related, not used here: `SET_BOX_TEMP_CONTROL`, `BOX_TEMP_SET`, `DISABLE_BOX_HEATER` (box temperature during a
-  print); `EX_START_DRYING` / `EX_STOP_DRYING` dry spools **inside the printer** using bed + chamber, with presets in
+- Related: `EX_START_DRYING` / `EX_STOP_DRYING` dry spools **inside the printer** using bed + chamber, with presets in
   `drying.conf` (type, bed °C, chamber °C, minutes – e.g. PLA 70/55/720, ABS 90/60/720); `PREPARE_FILAMENT_DRY`
   (homes, raises Z to 250, moves Y to 320 – positions the bed for that).
+
+## QIDI Box: temperature during a print
+
+- **QIDI Studio** has per-filament settings `box_temperature`, `box_temperature_range_low/high` and
+  `support_box_temp_control` (most QIDI ABS/ASA/PETG profiles: range up to 45 °C; PLA: 0). When slicing it writes
+  these lines itself – they're not in any G-code template – right before the machine start G-code:
+  ```
+  DISABLE_BOX_HEATER
+  BOX_TEMP_SET VT0=<box temperature of filament 1>      ; VT<tool>; seen with one filament (VT0=0 for PLA)
+  ```
+  and the stock end G-code has `DISABLE_BOX_HEATER`.
+- **OrcaSlicer has none of this** (checked the 2.5.0 nightly and Orca's main-branch source): no box temperature
+  setting, and it never writes `BOX_TEMP_SET`. Prints sliced in Orca never heat the box unless the G-code is added
+  by hand (filament or machine start G-code).
+- `BOX_TEMP_SET` with no arguments: no reply. `SET_BOX_TEMP_CONTROL` with none: `// Error: Missing parameters.`
+  `DISABLE_BOX_HEATER`: no reply. (These three were sent once by mistake **during a print**, with the box heater
+  already off: the print continued normally and nothing changed.) The exact multi-filament syntax of
+  `BOX_TEMP_SET` and what `SET_BOX_TEMP_CONTROL` takes are **not confirmed yet**.
 
 ---
 
@@ -328,7 +345,9 @@ QIDI's Fluidd build (v1.30.5) was written for the old index-based slot format:
 
 Rules that came out of working on this machine:
 
-1. Test only with the printer **idle** (`print_stats.state` = `standby`), and say so in your notes.
+1. Test only with the printer **idle** (`print_stats.state` = `standby`), and say so in your notes. **Check the state
+   right before every test command**, not once at the start of a session – the owner may have started a print since
+   (this was missed once; see the box temperature section).
 2. Read replies from `/server/gcode_store` – QIDI commands often "succeed" while printing an error to the console.
 3. Probe unknown commands **without arguments first**; they usually answer with the missing parameter name.
    For commands that move filament or motors, **don't probe with out-of-range values** – QIDI's code may not
