@@ -5,7 +5,7 @@ Everything is done through Moonraker's web API or Fluidd's file manager. SSH is 
 ## 1. Back up
 
 In Fluidd: **Configuration** → select all files in the config folder → **Download**. Keep that zip.
-(A stock copy from one printer is in [`printer/stock-config-2026-10-23/`](../printer/stock-config-2026-10-23) for reference.)
+This repo only contains the files that change; everything else stays as QIDI ships it.
 
 ## 2. Add the macros
 
@@ -17,8 +17,9 @@ In Fluidd: **Configuration** → select all files in the config folder → **Dow
    [include box_slots.cfg]         # computer-side box slot editing (SET_SLOT_FILAMENT)
    ```
 
-   That is the only change to `printer.cfg`. Nothing else in QIDI's files is modified, and `moonraker.conf`
-   is not changed.
+   That is the only change to `printer.cfg` ([reference copy](../printer/printer.cfg) – don't overwrite your
+   own `printer.cfg` with it; your printer's calibration section is at the end of yours). Nothing else in
+   QIDI's files is modified, and `moonraker.conf` is not changed.
 3. Save, then send `RESTART` from the console. **Use `RESTART`, not `FIRMWARE_RESTART`** – on this printer
    `FIRMWARE_RESTART` fails with "Failed automated reset of MCU 'mcu'"; a plain `RESTART` recovers it.
 4. Wait until Klipper reports ready, then run `LIST_SLOT_FILAMENTS` to check.
