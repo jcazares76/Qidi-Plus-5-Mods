@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { BUSY_STATES, NAMES, PRESETS } from '../core/constants';
-import { macroFilamentIds } from '../core/box';
+import { loadedIdx, macroFilamentIds } from '../core/box';
 import { validHex } from '../core/format';
 import { FilamentOp, FilamentOpsService } from '../core/filament-ops.service';
 import { MoonrakerService } from '../core/moonraker.service';
@@ -62,12 +62,15 @@ export interface SlotView {
         <button class="btn primary" [disabled]="!canSave()" (click)="save()">Save</button>
         <button class="btn" [disabled]="!dirty()" (click)="reset()">Reset</button>
       </div>
-      @if (move(); as mv) {
+      @if (moves(); as mvs) {
         <div class="actions">
-          <button class="btn" style="flex:1" [disabled]="!!ops.blockedReason()" [title]="ops.blockedReason() || mv.tip" (click)="runMove(mv.op)">
-            {{ ops.running()?.idx === slotIdx() ? mv.busyLabel : mv.label }}
-          </button>
+          @for (mv of mvs; track mv.op) {
+            <button class="btn" style="flex:1;padding:7px 6px" [disabled]="!!mv.disabled" [title]="mv.disabled || mv.tip" (click)="runMove(mv.op)">
+              {{ ops.running()?.idx === slotIdx() && ops.running()?.op === mv.op ? mv.busyLabel : mv.label }}
+            </button>
+          }
         </div>
+        @if (hint()) { <div class="muted" style="font-size:11px">{{ hint() }}</div> }
       }
       <div class="msg" [class]="'msg ' + msg().cls">{{ msg().text }}</div>
     </div>
@@ -121,19 +124,47 @@ export class SlotCard {
   protected readonly ops = inject(FilamentOpsService);
   /** 0-based box slot index, or null for the external spool (no box motor: never send a move for it). */
   protected readonly slotIdx = computed(() => (this.view().key === 'EXT' ? null : Number(this.view().key) - 1));
-  /** Unload for the slot in the toolhead; Eject for a spool that's in the box but not in the toolhead. */
-  protected readonly move = computed(() => {
-    const v = this.view();
-    if (this.slotIdx() == null) return null;
-    if (v.loaded) {
-      return { op: 'unload' as FilamentOp, label: 'Unload', busyLabel: 'Unloading…',
-        tip: 'Pull the filament out of the toolhead and park it in the tube, ready to load again' };
-    }
-    if (v.present) {
-      return { op: 'eject' as FilamentOp, label: 'Eject', busyLabel: 'Ejecting…',
-        tip: 'Pull the filament fully out of the box feeder so the spool can be removed' };
-    }
-    return null;
+  /** Slot currently in the toolhead (any slot), or null when nothing is loaded. */
+  private readonly loadedNow = computed(() => loadedIdx(this.mr.status()));
+
+  /**
+   * Load / Unload / Eject for box slots, always shown, disabled with a reason when they don't apply
+   * (same rules as QIDI's own panel). None for the external spool – it has no box motor.
+   */
+  protected readonly moves = computed(() => {
+    const v = this.view(), idx = this.slotIdx(), cur = this.loadedNow(), blocked = this.ops.blockedReason();
+    if (idx == null) return null;
+    const otherLoaded = cur != null && cur !== idx;
+    const curName = cur === 16 ? 'the external spool' : cur != null ? `slot ${cur + 1}` : '';
+    const reason = (own: string | null) => blocked || own;
+    return [
+      {
+        op: 'load' as FilamentOp, label: 'Load', busyLabel: 'Loading…',
+        tip: 'Feed the filament from this slot to the toolhead',
+        disabled: reason(v.loaded ? 'Already in the toolhead.'
+          : !v.present ? 'No filament in this slot.'
+          : otherLoaded ? `Unload ${curName} first.` : null),
+      },
+      {
+        op: 'unload' as FilamentOp, label: 'Unload', busyLabel: 'Unloading…',
+        tip: 'Pull the filament out of the toolhead and park it in the tube, ready to load again',
+        disabled: reason(v.loaded ? null : 'Not in the toolhead.'),
+      },
+      {
+        op: 'eject' as FilamentOp, label: 'Eject', busyLabel: 'Ejecting…',
+        tip: 'Pull the filament fully out of the box feeder so the spool can be removed',
+        disabled: reason(v.loaded ? 'In the toolhead – unload it first.' : !v.present ? 'No filament in this slot.' : null),
+      },
+    ];
+  });
+
+  /** One-line explanation under the buttons (hover a greyed button for its reason). */
+  protected readonly hint = computed(() => {
+    const ms = this.moves();
+    if (!ms || this.ops.running()) return '';
+    const b = this.ops.blockedReason();
+    if (b) return b;
+    return ms.every((m) => m.disabled) ? (ms[0].disabled ?? '') : '';
   });
 
   private lastSynced = '';
@@ -142,15 +173,19 @@ export class SlotCard {
     const idx = this.slotIdx();
     if (idx == null) return;
     const v = this.view(), what = `slot ${v.key} (${this.filName()})`;
-    const text = (op === 'unload'
-      ? `Unload ${what}?\n\nThe filament is pulled out of the toolhead and parked in the tube, ready to load again.`
-      : `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`)
-      + '\n\nThe printer homes and moves the toolhead first, so keep the bed area clear. Takes about 30–40 seconds.';
-    if (!confirm(text)) return;
-    this.msg.set({ text: op === 'unload' ? 'Unloading…' : 'Ejecting…', cls: '' });
+    const texts: Record<FilamentOp, string> = {
+      load: `Load ${what}?\n\nThe filament is fed from the box to the toolhead. The printer may heat the nozzle and purge.`,
+      unload: `Unload ${what}?\n\nThe filament is pulled out of the toolhead and parked in the tube, ready to load again.`,
+      eject: `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`,
+    };
+    const doing: Record<FilamentOp, [string, string]> = {
+      load: ['Loading…', 'Loaded.'], unload: ['Unloading…', 'Unloaded.'], eject: ['Ejecting…', 'Ejected.'],
+    };
+    if (!confirm(texts[op] + '\n\nThe printer homes and moves the toolhead first, so keep the bed area clear.')) return;
+    this.msg.set({ text: doing[op][0], cls: '' });
     try {
       await this.ops.run(op, idx);
-      this.msg.set({ text: op === 'unload' ? 'Unloaded.' : 'Ejected.', cls: 'ok' });
+      this.msg.set({ text: doing[op][1], cls: 'ok' });
       setTimeout(() => { if (this.msg().cls === 'ok') this.msg.set({ text: '', cls: '' }); }, 5000);
     } catch (e: any) {
       this.msg.set({ text: String(e?.message || e).replace(/^.*CommandError:\s*/, ''), cls: 'err' });

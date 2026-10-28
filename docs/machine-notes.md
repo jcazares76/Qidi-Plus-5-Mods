@@ -147,7 +147,7 @@ box's slot 1); the box label, slicers and this repo's macros use 1-based numbers
 ```
 UNLOAD_FILAMENT_CONTROL SLOT=<i>   ; pull filament out of the toolhead, park it in the tube (ready to reload)
 EJECT_FILAMENT_CONTROL SLOT=<i>    ; pull filament fully out of the box feeder
-LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament to the toolhead (not used by the dashboard)
+LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament from the slot to the toolhead
 ```
 
 - `SLOT` is the **0-based** box slot index – the code looks up `box_stepper slot<SLOT>`. Without it:
@@ -162,7 +162,10 @@ LOAD_FILAMENT_CONTROL SLOT=<i>     ; feed filament to the toolhead (not used by 
   then read empty (`box_inserted_3` 0, `runout_button` 1). After pushing the filament back in: `box_inserted_3` 1,
   `runout_button` 0, saved `slot3` = **3** (it was 1 before) – inferred to mean "re-inserted, not yet fed to the
   ready position".
-- QIDI's Fluidd enables its buttons like this: eject when `runout_button` is 0; unload only for the loaded slot.
+- QIDI's Fluidd enables its buttons like this: eject when `runout_button` is 0; unload only for the loaded slot;
+  load when the spool is present and that slot isn't already loaded. The dashboard uses the same rules and also
+  requires nothing else to be loaded before Load.
+- `LOAD_FILAMENT_CONTROL` without arguments: `// Error: Missing SLOT parameter.` (same signature as the others).
 - QIDI's wiki: unload all filament from the feeder before drying.
 
 ## QIDI Box: filament dryer
@@ -308,7 +311,8 @@ Rules that came out of working on this machine:
 ## Open questions and untested
 
 - `UNLOAD_FILAMENT_CONTROL` on a really loaded spool (should park it in the tube) – not yet run on hardware.
-- `LOAD_FILAMENT_CONTROL`, `RFID_READ`, `READ_RFID`, `INIT_RFID_READ`, `UPDATE_FILAMENT_INFORMATION` – parameters
+- `LOAD_FILAMENT_CONTROL SLOT=<i>` on hardware (whether it heats/purges, how long it takes) – not yet run.
+- `RFID_READ`, `READ_RFID`, `INIT_RFID_READ`, `UPDATE_FILAMENT_INFORMATION` – parameters
   and effects not tested.
 - Full-length box drying session (only short start/stop tests so far).
 - Saved `slot<N>` = 3 meaning ("re-inserted after eject") is inferred from one test.

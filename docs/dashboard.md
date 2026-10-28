@@ -43,12 +43,13 @@ All panels collapse; the open/closed state is remembered (except Camera).
   **in the toolhead**. Slot cards show "Spool in" / "Empty" from the spool sensor and "In toolhead" for the
   loaded slot. Edit filament and color per slot (and the external spool); saving uses `SET_SLOT_FILAMENT`
   and is blocked while printing.
-  - **Unload / Eject** (Angular version), on each box slot card, with a confirmation first:
-    **Unload** appears on the slot that's in the toolhead – it pulls the filament out of the extruder and parks
-    it in the tube, ready to load again. **Eject** appears on slots with a spool that isn't in the toolhead – it
-    pulls the filament fully out of the box feeder. Both home and move the toolhead first (keep the bed clear;
-    ~30–40 s). Blocked while printing; one move at a time; never offered for
-    the external spool (see [machine-notes.md](machine-notes.md#qidi-box-unload-eject-load)).
+  - **Load / Unload / Eject** (Angular version), always shown on each box slot card and greyed out with a reason
+    (hover) when they don't apply, with a confirmation first:
+    **Load** feeds the slot's filament to the toolhead (only when the slot has a spool and nothing else is loaded).
+    **Unload** – only for the slot in the toolhead – pulls the filament out of the extruder and parks it in the
+    tube, ready to load again. **Eject** – spool present, not in the toolhead – pulls the filament fully out of the
+    box feeder. They home and move the toolhead (keep the bed clear). Blocked while printing; one move at a time;
+    never offered for the external spool (see [machine-notes.md](machine-notes.md#qidi-box-unload-eject-load)).
   - **Filament dryer** (Angular version): start drying with a temperature (30–65 °C) and time (1–24 h), see
     the target, box air temperature and time left, and stop it. The temperature defaults to the lowest QIDI
     drying limit among the loaded spools, and it warns when the setting is above a spool's limit (PLA is treated
