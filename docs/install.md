@@ -21,8 +21,9 @@ This repo only contains the files that change; everything else stays as QIDI shi
    [original](../printer/original/printer.cfg) – don't overwrite your
    own `printer.cfg` with it; your printer's calibration section is at the end of yours). Nothing else in
    QIDI's files is modified, and `moonraker.conf` is not changed.
-3. Save, then send `RESTART` from the console. **Use `RESTART`, not `FIRMWARE_RESTART`** – on this printer
-   `FIRMWARE_RESTART` fails with "Failed automated reset of MCU 'mcu'"; a plain `RESTART` recovers it.
+3. Save, then send `RESTART` from the console. **Try `RESTART` first** – `FIRMWARE_RESTART` once failed on this
+   printer with "Failed automated reset of MCU 'mcu'". If Klipper reports that a board (MCU) is shut down,
+   `RESTART` isn't enough; then use `FIRMWARE_RESTART` (or power-cycle the printer).
 4. Wait until Klipper reports ready, then run `LIST_SLOT_FILAMENTS` to check.
 
 If Klipper shows an error after the restart, re-upload your backup `printer.cfg` and `RESTART` again.

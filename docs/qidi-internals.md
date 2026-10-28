@@ -96,6 +96,25 @@ BOX_STOP_DRYING BOX=1
   with the bed and chamber heaters (presets in `drying.conf`); `SET_BOX_TEMP_CONTROL`, `BOX_TEMP_SET`,
   `DISABLE_BOX_HEATER` set box temperature during a print.
 
+## Unload and eject
+
+```
+UNLOAD_FILAMENT_CONTROL SLOT=0   ; pull filament out of the toolhead, park it in the tube (ready to reload)
+EJECT_FILAMENT_CONTROL SLOT=0    ; pull filament fully out of the box feeder
+LOAD_FILAMENT_CONTROL SLOT=0     ; feed filament to the toolhead (not used by the dashboard)
+```
+
+- `SLOT` is the **0-based** box slot index: the code looks up `box_stepper slot<SLOT>` (box 1 = 0–3).
+  Without it: `// Error: Missing SLOT parameter.`
+- **Danger:** the value isn't validated. `EJECT_FILAMENT_CONTROL SLOT=99` raised
+  `Unknown config object 'box_stepper slot99'` inside QIDI's `multi_color_controller` and **shut Klipper down**.
+  `RESTART` wasn't enough ("Can not update MCU 'mcu' config as it is shutdown"); `FIRMWARE_RESTART` recovered it.
+  The external spool (index 16) has no `box_stepper`, so never send these for it.
+- QIDI's Fluidd buttons (Uninstall / Load / Unload) send `E_BOX` / `E_LOAD` / `E_UNLOAD slot=<i>`, which don't
+  exist on current firmware.
+- Fluidd's enable rules: eject when the slot's `box_stepper slot<i>.runout_button` is 0 (spool present);
+  unload only for the slot that's loaded.
+
 ## Other QIDI G-code commands seen
 
 `UPDATE_FILAMENT_INFORMATION`, `READ_RFID`, `INIT_RFID_READ`, `LOAD_FILAMENT_CONTROL`, `UNLOAD_FILAMENT_CONTROL`,
@@ -105,7 +124,7 @@ BOX_STOP_DRYING BOX=1
 
 - `#` starts a comment in Klipper configs even inside macro code, and is dropped from G-code commands
   (`COLOR=#FF0000` arrives empty).
-- Use `RESTART`, not `FIRMWARE_RESTART`.
+- Use `RESTART` first; `FIRMWARE_RESTART` failed once on this printer but is needed when a board (MCU) is shut down.
 - After a restart, wait for Klipper to be ready; earlier commands fail with "Printer is not ready".
 - Safe way to change config: download → edit → upload with `/server/files/upload` → `RESTART` →
   check `/printer/info`; if it's `error`, re-upload the backup and `RESTART`.

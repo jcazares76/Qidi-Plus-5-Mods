@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { BUSY_STATES, NAMES, PRESETS } from '../core/constants';
 import { macroFilamentIds } from '../core/box';
 import { validHex } from '../core/format';
+import { FilamentOp, FilamentOpsService } from '../core/filament-ops.service';
 import { MoonrakerService } from '../core/moonraker.service';
 
 export interface SlotView {
@@ -61,6 +62,13 @@ export interface SlotView {
         <button class="btn primary" [disabled]="!canSave()" (click)="save()">Save</button>
         <button class="btn" [disabled]="!dirty()" (click)="reset()">Reset</button>
       </div>
+      @if (move(); as mv) {
+        <div class="actions">
+          <button class="btn" style="flex:1" [disabled]="!!ops.blockedReason()" [title]="ops.blockedReason() || mv.tip" (click)="runMove(mv.op)">
+            {{ ops.running()?.idx === slotIdx() ? mv.busyLabel : mv.label }}
+          </button>
+        </div>
+      }
       <div class="msg" [class]="'msg ' + msg().cls">{{ msg().text }}</div>
     </div>
   `,
@@ -110,7 +118,43 @@ export class SlotCard {
   protected readonly canSave = computed(() =>
     !this.mr.isBusy() && macroFilamentIds(this.mr.status()).length > 0 && this.dirty() && !!this.fil() && this.validHexNow());
 
+  protected readonly ops = inject(FilamentOpsService);
+  /** 0-based box slot index, or null for the external spool (no box motor: never send a move for it). */
+  protected readonly slotIdx = computed(() => (this.view().key === 'EXT' ? null : Number(this.view().key) - 1));
+  /** Unload for the slot in the toolhead; Eject for a spool that's in the box but not in the toolhead. */
+  protected readonly move = computed(() => {
+    const v = this.view();
+    if (this.slotIdx() == null) return null;
+    if (v.loaded) {
+      return { op: 'unload' as FilamentOp, label: 'Unload', busyLabel: 'Unloading…',
+        tip: 'Pull the filament out of the toolhead and park it in the tube, ready to load again' };
+    }
+    if (v.present) {
+      return { op: 'eject' as FilamentOp, label: 'Eject', busyLabel: 'Ejecting…',
+        tip: 'Pull the filament fully out of the box feeder so the spool can be removed' };
+    }
+    return null;
+  });
+
   private lastSynced = '';
+
+  protected async runMove(op: FilamentOp): Promise<void> {
+    const idx = this.slotIdx();
+    if (idx == null) return;
+    const v = this.view(), what = `slot ${v.key} (${this.filName()})`;
+    const text = op === 'unload'
+      ? `Unload ${what}?\n\nThe filament is pulled out of the toolhead and parked in the tube, ready to load again.`
+      : `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`;
+    if (!confirm(text)) return;
+    this.msg.set({ text: op === 'unload' ? 'Unloading…' : 'Ejecting…', cls: '' });
+    try {
+      await this.ops.run(op, idx);
+      this.msg.set({ text: op === 'unload' ? 'Unloaded.' : 'Ejected.', cls: 'ok' });
+      setTimeout(() => { if (this.msg().cls === 'ok') this.msg.set({ text: '', cls: '' }); }, 5000);
+    } catch (e: any) {
+      this.msg.set({ text: String(e?.message || e).replace(/^.*CommandError:\s*/, ''), cls: 'err' });
+    }
+  }
 
   constructor() {
     // Take new printer values unless there are unsaved edits.

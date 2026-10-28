@@ -15,7 +15,7 @@ interface Pending {
 }
 
 /** Object types the dashboard subscribes to (besides the fixed list below). */
-const SUB_TYPES = new Set([...FAN_PREFIXES, 'output_pin', 'smart_output_pin', 'filament_switch_sensor',
+const SUB_TYPES = new Set([...FAN_PREFIXES, 'output_pin', 'smart_output_pin', 'filament_switch_sensor', 'box_stepper',
   'extruder', 'heater_bed', 'heater_generic', 'temperature_sensor']);
 const SUB_FIXED = ['webhooks', 'print_stats', 'virtual_sdcard', 'display_status', 'idle_timeout', 'pause_resume',
   'toolhead', 'gcode_move', 'heaters', 'box_extras', 'save_variables', 'gcode_macro _BOX_SLOT_DATA'];
