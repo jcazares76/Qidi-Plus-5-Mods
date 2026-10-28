@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-/** Per-browser settings kept in localStorage (same keys as the original page, so they're shared). */
+/** Per-browser settings kept in localStorage. */
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   /** Printer address. Empty until the user enters it (or opens the page with ?printer=<address>). */

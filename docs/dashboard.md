@@ -1,21 +1,13 @@
 # Dashboard (`dashboard/`)
 
-A Fluidd-style dashboard for the QIDI Plus 5 that runs from your PC. There are two versions with the same
-features and look, served side by side:
-
-| URL | Version | Source |
-|---|---|---|
-| `http://localhost:8765/` | Original single-file page (plain HTML/JS) | [`dashboard/index.html`](../dashboard/index.html) |
-| `http://localhost:8765/ng/` | Angular 22 version (built output committed) | [`angular/`](../angular) → built into [`dashboard/ng/`](../dashboard/ng) |
-
-Both share the printer address and panel settings (same browser storage). Node.js is only needed to
-*change* the Angular version, not to run it – see [`angular/README.md`](../angular/README.md).
+A Fluidd-style dashboard for the QIDI Plus 5 that runs from your PC. It's an Angular 22 app: source in
+[`angular/`](../angular), built output committed in [`dashboard/app/`](../dashboard/app). Node.js is only needed
+to *change* it, not to run it – see [`angular/README.md`](../angular/README.md).
 
 ## Run it
 
 Double-click **`Open Dashboard.bat`**. It starts a tiny web server on `http://localhost:8765` (this PC only)
-and opens the page. Close the window to stop it. To open the Angular version directly, run
-`serve.ps1 -Open ng/`.
+and opens the page. Close the window to stop it. (The old address `/ng/` redirects to the main page.)
 
 The first time, type your printer's IP address into the **Printer** box in the top bar. It's remembered in
 that browser. You can also open `http://localhost:8765/?printer=<printer-ip>`.
@@ -43,14 +35,14 @@ All panels collapse; the open/closed state is remembered (except Camera).
   **in the toolhead**. Slot cards show "Spool in" / "Empty" from the spool sensor and "In toolhead" for the
   loaded slot. Edit filament and color per slot (and the external spool); saving uses `SET_SLOT_FILAMENT`
   and is blocked while printing.
-  - **Load / Unload / Eject** (Angular version), always shown on each box slot card and greyed out with a reason
+  - **Load / Unload / Eject**, always shown on each box slot card and greyed out with a reason
     (hover) when they don't apply, with a confirmation first:
     **Load** feeds the slot's filament to the toolhead (only when the slot has a spool and nothing else is loaded).
     **Unload** – only for the slot in the toolhead – pulls the filament out of the extruder and parks it in the
     tube, ready to load again. **Eject** – spool present, not in the toolhead – pulls the filament fully out of the
     box feeder. They home and move the toolhead (keep the bed clear). Blocked while printing; one move at a time;
     never offered for the external spool (see [machine-notes.md](machine-notes.md#qidi-box-unload-eject-load)).
-  - **Filament dryer** (Angular version): start drying with a temperature (30–65 °C) and time (1–24 h), see
+  - **Filament dryer**: start drying with a temperature (30–65 °C) and time (1–24 h), see
     the target, box air temperature and time left, and stop it. The temperature defaults to the lowest QIDI
     drying limit among the loaded spools, and it warns when the setting is above a spool's limit (PLA is treated
     as 45 °C). Start is disabled while printing and while filament is in the toolhead – QIDI requires unloading
@@ -82,8 +74,11 @@ Upload only, then start from the dashboard – or use a start G-code that sets t
 
 ## Implementation notes
 
-- Plain HTML/JS, no build step, no external libraries. Talks to Moonraker over its websocket
-  (`ws://<printer-ip>:7125/websocket`, JSON-RPC) with push updates – no polling.
+- Angular 22 (standalone components, signals, zoneless), no other libraries. Talks to Moonraker over its
+  websocket (`ws://<printer-ip>:7125/websocket`, JSON-RPC) with push updates – no polling. G-code calls wait up
+  to 10 minutes for Moonraker's reply (box load/unload take ~2 minutes).
+- `dashboard/serve.ps1` serves `dashboard/app/` on localhost only, falls back to `index.html` for app routes, and
+  refuses paths outside that folder.
 - Camera: `http://<printer-ip>/webcam/?action=stream` (crowsnest/ustreamer behind nginx).
 - "In toolhead": `box_extras.loaded_slot` reads `slot0`–`slot15` for box slots and `slot16` for external –
   but it also reads `slot16` when **nothing** is loaded. The page therefore also checks the toolhead filament

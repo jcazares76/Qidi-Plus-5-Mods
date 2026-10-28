@@ -28,10 +28,10 @@
               "src/styles.css"
             ],
             "outputPath": {
-              "base": "../dashboard/ng",
+              "base": "../dashboard/app",
               "browser": ""
             },
-            "baseHref": "/ng/"
+            "baseHref": "/"
           },
           "configurations": {
             "production": {
