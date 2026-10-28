@@ -44,7 +44,7 @@ curl.exe upload nothing without an error.
 QIDI updates replace `printer.cfg` (the old one is kept as `printer-<date>.cfg`). Re-add the include line
 after `[include box.cfg]` and `RESTART`. `box_slots.cfg` normally survives; check it's still in the config folder.
 If QIDI changes the slot data format again, `LIST_SLOT_FILAMENTS` and the dashboard will show it – see
-[qidi-internals.md](qidi-internals.md) for what to re-check.
+[machine-notes.md](machine-notes.md#qidi-box-how-slot-data-is-stored) for what to re-check.
 
 ## Undo
 

@@ -48,12 +48,12 @@ All panels collapse; the open/closed state is remembered (except Camera).
     it in the tube, ready to load again. **Eject** appears on slots with a spool that isn't in the toolhead – it
     pulls the filament fully out of the box feeder. Both home and move the toolhead first (keep the bed clear;
     ~30–40 s). Blocked while printing; one move at a time; never offered for
-    the external spool (see [qidi-internals.md](qidi-internals.md#unload-and-eject)).
+    the external spool (see [machine-notes.md](machine-notes.md#qidi-box-unload-eject-load)).
   - **Filament dryer** (Angular version): start drying with a temperature (30–65 °C) and time (1–24 h), see
     the target, box air temperature and time left, and stop it. The temperature defaults to the lowest QIDI
     drying limit among the loaded spools, and it warns when the setting is above a spool's limit (PLA is treated
     as 45 °C). Start is disabled while printing and while filament is in the toolhead – QIDI requires unloading
-    first. Uses `BOX_START_DRYING` / `BOX_STOP_DRYING` (see [qidi-internals.md](qidi-internals.md#box-filament-dryer)).
+    first. Uses `BOX_START_DRYING` / `BOX_STOP_DRYING` (see [machine-notes.md](machine-notes.md#qidi-box-filament-dryer)).
 - **Camera** – closed on every page load. The MJPEG stream only runs while the panel is open **and** the
   browser tab is visible, to keep load off the printer.
 - **Console** – recent history, live replies, ↑/↓ command history. Automatic light/screen/LED status chatter is
@@ -66,7 +66,7 @@ All panels collapse; the open/closed state is remembered (except Camera).
 ## Printing with the box
 
 QIDI's Fluidd asks which box slot feeds each filament before printing, but its slot list is empty on current
-firmware (see [qidi-internals.md](qidi-internals.md)). The dashboard's print dialog does this instead:
+firmware (see [machine-notes.md](machine-notes.md#qidis-fluidd-what-doesnt-work)). The dashboard's print dialog does this instead:
 
 1. For each tool in the file (`used_extruders` from QIDI Studio files; for OrcaSlicer files, one per entry in
    `filament_type`), pick a loaded box slot. The default is the same filament type and the closest color.
