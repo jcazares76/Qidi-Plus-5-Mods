@@ -20,7 +20,7 @@ Slots are **0-based** here, 1-based on the box label, in slicers and in the macr
 | `filament_slot<N>` | QIDI filament ID | `'QFA00'` (PLA Basic) |
 | `color_slot<N>` | one-item list of hex | `['FAFAFA']` |
 | `vendor_slot<N>` | legacy, appears unused | `1` |
-| `slot<N>` | spool present flag (mirrors the sensor) | `0` / `1` |
+| `slot<N>` | slot state: 0 = empty, 1 = spool present, 3 = re-inserted after an eject (see below) | `0` / `1` / `3` |
 | `value_t<T>` | tool → slot mapping used when printing | `'slot2'` |
 | `enable_box` | 1 = print from the box, 0 = external spool | `1` |
 | `filament_slot16` / `color_slot16` | the external spool holder | |
@@ -114,6 +114,12 @@ LOAD_FILAMENT_CONTROL SLOT=0     ; feed filament to the toolhead (not used by th
   exist on current firmware.
 - Fluidd's enable rules: eject when the slot's `box_stepper slot<i>.runout_button` is 0 (spool present);
   unload only for the slot that's loaded.
+- Tested eject (slot 4, `SLOT=3`, nothing in the toolhead): the printer **homed and moved the toolhead**,
+  retracted the filament fully out of the box, and replied `// Flow completed successfully.` after ~36 s.
+  Afterwards `box_inserted_3` = 0 and `box_stepper slot3.runout_button` = 1 (empty). After pushing the filament
+  back into the slot, `box_inserted_3` = 1, `runout_button` = 0 and the saved `slot3` flag = **3** (it was 1 before
+  the eject) – 3 appears to mean "filament re-inserted, not yet fed to the ready position".
+- Unload not yet tested on hardware.
 
 ## Other QIDI G-code commands seen
 

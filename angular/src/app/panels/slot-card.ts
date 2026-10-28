@@ -142,9 +142,10 @@ export class SlotCard {
     const idx = this.slotIdx();
     if (idx == null) return;
     const v = this.view(), what = `slot ${v.key} (${this.filName()})`;
-    const text = op === 'unload'
+    const text = (op === 'unload'
       ? `Unload ${what}?\n\nThe filament is pulled out of the toolhead and parked in the tube, ready to load again.`
-      : `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`;
+      : `Eject ${what}?\n\nThe filament is pulled all the way out of the box feeder so you can remove the spool.`)
+      + '\n\nThe printer homes and moves the toolhead first, so keep the bed area clear. Takes about 30–40 seconds.';
     if (!confirm(text)) return;
     this.msg.set({ text: op === 'unload' ? 'Unloading…' : 'Ejecting…', cls: '' });
     try {
