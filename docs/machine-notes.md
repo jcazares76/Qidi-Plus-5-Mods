@@ -229,6 +229,10 @@ BOX_STOP_DRYING BOX=<n>
 
 ## Slicers
 
+Full migration guide: [qidi-studio-to-orca.md](qidi-studio-to-orca.md).
+
+- **OrcaSlicer stable v2.4.2 has no X-Plus 5 profile**; it arrived in 2.5.0 (alpha/beta/nightly). Orca's built-in
+  X-Plus 5 G-code is QIDI Studio's, ported (`[chamber_temperature]` instead of `[chamber_temperatures]`).
 - **QIDI Studio** files' metadata includes `used_extruders`; **OrcaSlicer** files don't, so derive the tools from
   `filament_type` / `preset_colours` (one entry per filament).
 - **Chamber temperature variable:** QIDI Studio uses `[chamber_temperatures]`; OrcaSlicer needs

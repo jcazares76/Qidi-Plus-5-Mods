@@ -1,5 +1,8 @@
 # OrcaSlicer (`orcaslicer/`)
 
+Moving from QIDI Studio? Start with [qidi-studio-to-orca.md](qidi-studio-to-orca.md) (which Orca build to use,
+what to copy and what to change).
+
 ## The "UPS Safe" printer profile
 
 [`Qidi X-Plus 5 0.4 nozzle - UPS Safe.json`](../orcaslicer/Qidi%20X-Plus%205%200.4%20nozzle%20-%20UPS%20Safe.json)

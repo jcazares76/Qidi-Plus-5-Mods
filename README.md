@@ -34,6 +34,7 @@ touching QIDI's own files.
 - [Box slot macros](docs/box-slot-macros.md)
 - [Dashboard](docs/dashboard.md)
 - [OrcaSlicer profile and gotchas](docs/orcaslicer.md)
+- [Migrating from QIDI Studio to OrcaSlicer](docs/qidi-studio-to-orca.md)
 - [Machine notes: everything specific to the QIDI Plus 5 + QIDI Box](docs/machine-notes.md) – start here if you pick up this project
 
 ## Tested with
