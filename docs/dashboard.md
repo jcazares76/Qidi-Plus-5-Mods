@@ -29,11 +29,18 @@ All panels collapse; the open/closed state is remembered (except Camera).
 - **Status** – the title is the printer state (Ready, Printing, Paused, …). File + thumbnail, progress, elapsed,
   remaining, layer, speed, flow, filament used, position. Pause / Resume / Cancel (asks first).
   "Restart Klipper" (`RESTART`) only appears when Klipper isn't ready.
-- **Thermals** (view only) – every heater and sensor with power, actual and target.
+- **Thermals** – every heater and sensor with power, actual and target.
+  - **Set a target** for the extruder, bed, chamber and box heater: type it in the Target box and press Enter
+    (0 or empty = off; Esc or clicking away cancels), or ✕ to turn it off. Works during prints too. Sends
+    `SET_HEATER_TEMPERATURE HEATER=<extruder|heater_bed|chamber|heater_box1> TARGET=<°C>`. Limits: extruder 370,
+    bed 120, chamber 65, box 65 (`HEATER_MAX_TARGET` in `constants.ts`).
+  - Box heater: asks first if the value is above a loaded spool's drying limit (PLA counts as 45 °C). Set during a
+    print, it also arms `AUTO_BOX_TEMP`'s watcher (when the macros are installed), so the box heater turns off
+    within a minute after the print ends – QIDI's end G-code doesn't switch it off.
   - Actual is colored against the target: blue = below, green = within ±2 °C, red = above. No color without a target.
   - Power is a **10-second average**, drawn as a red bar on black while a target is set.
   - **Total** above the Power column = Σ (10 s average power × rated watts). Ratings are in `HEATER_WATTS`
-    in `index.html` (nozzle 150 W, bed 500 W, chamber 550 W, box heater 245 W). Heaters only – motors, fans,
+    in `constants.ts` (nozzle 150 W, bed 500 W, chamber 550 W, box heater 245 W). Heaters only – motors, fans,
     electronics and lights are not included.
   - 10-minute chart (seeded from Moonraker's temperature store) with 20° / 1-minute gridlines and a hover
     tooltip showing every sensor at that moment.

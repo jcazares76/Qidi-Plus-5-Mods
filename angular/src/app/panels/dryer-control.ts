@@ -1,13 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { BUSY_STATES } from '../core/constants';
+import { BUSY_STATES, PLA_SOFT_LIMIT } from '../core/constants';
 import { boxSlotList, loadedIdx } from '../core/box';
 import { MoonrakerService } from '../core/moonraker.service';
 
 /** QIDI Box spec maximum drying temperature. */
 const MAX_TEMP = 65;
 const MIN_TEMP = 30;
-/** QIDI reports box_max_temp 0 for PLA (manual box heating disabled); treat it as this soft limit. */
-const PLA_SOFT_LIMIT = 45;
 
 /**
  * Box filament dryer: BOX_START_DRYING BOX=<n> TEMP=<°C> TIME=<hours> / BOX_STOP_DRYING BOX=<n>.

@@ -1,7 +1,8 @@
 import {
   ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild,
 } from '@angular/core';
-import { CHART_COLORS, CHART_LEN, HEATER_WATTS, TEMP_TOL } from '../core/constants';
+import { CHART_COLORS, CHART_LEN, HEATER_MAX_TARGET, HEATER_WATTS, PLA_SOFT_LIMIT, TEMP_TOL } from '../core/constants';
+import { boxSlotList } from '../core/box';
 import { fmtClock, fmtDur, pretty } from '../core/format';
 import { MoonrakerService } from '../core/moonraker.service';
 import { ThermalHistoryService } from '../core/thermal-history.service';
@@ -11,6 +12,8 @@ interface TipRow { color: string; label: string; temp: string; target: string }
 interface Tip { left: number; when: string; rows: TipRow[] }
 
 const hasTarget = (n: string) => !n.startsWith('temperature_sensor');
+/** Klipper heater name for SET_HEATER_TEMPERATURE: "heater_generic chamber" → "chamber". */
+const heaterName = (n: string) => n.replace(/^heater_generic /, '');
 
 export function sensorLabel(n: string): string {
   if (n === 'extruder') return 'Extruder';
@@ -23,7 +26,7 @@ export function sensorLabel(n: string): string {
   return pretty(n);
 }
 
-/** Heaters and sensors (view only): colored actual vs target, 10 s average power bars, total draw, 10-minute chart. */
+/** Heaters and sensors: settable targets, colored actual vs target, 10 s average power bars, total draw, 10-minute chart. */
 @Component({
   selector: 'app-thermals-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,11 +49,25 @@ export function sensorLabel(n: string): string {
               <td><span class="swatch" [style.background]="r.color"></span>{{ r.label }}</td>
               <td class="num pw" [class.pbar]="r.bar" [style.background]="r.bar ? r.barBg : null" [title]="r.powerTip">{{ r.power }}</td>
               <td class="num act" [class]="'num act ' + r.cls">{{ r.actual }}</td>
-              <td class="num">{{ r.target }}</td>
+              <td class="num">
+                @if (r.max) {
+                  <span class="tset">
+                    <input type="number" min="0" [max]="r.max" step="1" [value]="r.targetNum || ''" placeholder="off"
+                      [disabled]="!ready()" [title]="'Type a target (0–' + r.max + ' °C) and press Enter. 0 or empty = off.'"
+                      (keydown.enter)="setTarget(r.name, $any($event.target))"
+                      (keydown.escape)="revert($any($event.target), r.targetNum)"
+                      (blur)="revert($any($event.target), r.targetNum)" />
+                    <button class="off" [disabled]="!ready() || !r.targetNum" title="Turn off" (click)="send(r.name, 0)">✕</button>
+                  </span>
+                } @else {
+                  {{ r.target }}
+                }
+              </td>
             </tr>
           }
         </tbody>
       </table>
+      @if (msg()) { <div class="msg" style="margin-top:6px">{{ msg() }}</div> }
       <div class="chartwrap">
         <canvas #chart class="chart" (pointermove)="hoverX.set($event.offsetX)" (pointerleave)="hoverX.set(null)"></canvas>
         @if (tip(); as t) {
@@ -63,8 +80,16 @@ export function sensorLabel(n: string): string {
           </div>
         }
       </div>
-      <div class="muted" style="font-size:11px;margin-top:4px">Last 10 minutes. Dashed lines are targets. View only.</div>
+      <div class="muted" style="font-size:11px;margin-top:4px">Last 10 minutes. Dashed lines are targets.</div>
     </app-card>
+  `,
+  styles: `
+    td.act, td.pw { white-space: nowrap; }
+    .tset { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; }
+    .tset input { width: 64px; text-align: right; padding: 2px 4px; }
+    .tset .off { background: none; border: 1px solid var(--line); color: var(--muted, #999); border-radius: 4px;
+      padding: 1px 6px; cursor: pointer; line-height: 1.3; }
+    .tset .off:disabled { opacity: .3; cursor: default; }
   `,
   host: { '(window:resize)': 'draw()' },
 })
@@ -96,6 +121,8 @@ export class ThermalsPanel {
         color: CHART_COLORS[i % CHART_COLORS.length],
         actual: o.temperature != null ? o.temperature.toFixed(1) + ' °C' : '–',
         target: hasTarget(n) ? (o.target ? o.target.toFixed(0) + ' °C' : 'off') : '',
+        targetNum: Math.round(o.target ?? 0),
+        max: HEATER_MAX_TARGET[n] ?? 0,
         cls,
         power: pct == null ? '' : pct + '%',
         powerTip: pct == null ? '' : `Average of the last ${samples} s (now ${Math.round((o.power ?? 0) * 100)}%)`,
@@ -121,6 +148,57 @@ export class ThermalsPanel {
       tip: `Heater draw, 10 s average (power × rated watts):\n${parts.join('\n')}\nMax if all on: ${max} W\nNot included: motors, fans, electronics, lights.`,
     };
   });
+
+  protected readonly ready = computed(() => this.mr.klippyState() === 'ready');
+  protected readonly msg = signal('');
+
+  /** Enter in a target box: check the value, warn about box spools that could soften, then send. */
+  protected setTarget(n: string, el: HTMLInputElement): void {
+    const raw = el.value.trim(), v = raw === '' ? 0 : Number(raw), max = HEATER_MAX_TARGET[n];
+    if (!Number.isFinite(v) || v < 0 || v > max) {
+      this.msg.set(`${sensorLabel(n)}: enter 0–${max} °C.`);
+      return;
+    }
+    if (n.startsWith('heater_generic heater_box') && v > 0) {
+      const b = Number(n.match(/(\d+)$/)![1]) - 1;
+      const bx = this.mr.status()['box_extras']?.boxes?.[b];
+      const risky = boxSlotList(this.mr.status())
+        .filter((x) => Math.floor(x.idx / 4) === b && x.present)
+        .map((x) => {
+          const lim = bx?.filament_info?.[x.idx % 4]?.box_max_temp ?? 0;
+          return { x, lim: lim > 0 ? lim : PLA_SOFT_LIMIT, pla: !(lim > 0) };
+        })
+        .filter((s) => v > s.lim)
+        .map((s) => `Slot ${s.x.label} (${s.x.name || s.x.type || 'filament'}) ${s.pla ? 'is PLA and can soften' : `has a drying limit of ${s.lim} °C`}`);
+      if (risky.length && !confirm(`${risky.join('\n')}\n\nSet the box to ${v} °C anyway?`)) {
+        el.value = String(Math.round(this.mr.status()[n]?.target ?? 0) || '');
+        return;
+      }
+    }
+    this.send(n, Math.round(v));
+    el.blur();
+  }
+
+  protected revert(el: HTMLInputElement, current: number): void {
+    el.value = current ? String(current) : '';
+  }
+
+  protected async send(n: string, v: number): Promise<void> {
+    let script = `SET_HEATER_TEMPERATURE HEATER=${heaterName(n)} TARGET=${v}`;
+    // Box heater during a print: let AUTO_BOX_TEMP's watcher switch it off when the print ends
+    // (QIDI's end G-code doesn't turn off a heater set this way).
+    const st = this.mr.status();
+    if (n.startsWith('heater_generic heater_box') && v > 0 && st['gcode_macro AUTO_BOX_TEMP']
+      && ['printing', 'paused'].includes(this.mr.printState())) {
+      script += '\nSET_GCODE_VARIABLE MACRO=AUTO_BOX_TEMP VARIABLE=active VALUE=1\nUPDATE_DELAYED_GCODE ID=_AUTO_BOX_TEMP_WATCH DURATION=60';
+    }
+    this.msg.set('');
+    try {
+      await this.mr.gcode(script, 15_000);
+    } catch (e: any) {
+      this.msg.set(`${sensorLabel(n)}: ${e?.message || e}`);
+    }
+  }
 
   constructor() {
     effect(() => {

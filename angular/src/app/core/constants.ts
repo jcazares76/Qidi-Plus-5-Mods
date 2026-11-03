@@ -42,6 +42,16 @@ export const HEATER_WATTS: Record<string, number> = {
   'extruder': 150, 'heater_bed': 500, 'heater_generic chamber': 550, 'heater_generic heater_box1': 245,
 };
 
+/**
+ * Heaters whose target can be set from the Thermals panel, with the highest target allowed (°C).
+ * Just under each heater's max_temp in printer.cfg (375 / 125 / 68); the box is QIDI's 65 °C spec.
+ */
+export const HEATER_MAX_TARGET: Record<string, number> = {
+  'extruder': 370, 'heater_bed': 120, 'heater_generic chamber': 65, 'heater_generic heater_box1': 65,
+};
+/** QIDI reports box_max_temp 0 for PLA; above this the box warns that PLA can soften. */
+export const PLA_SOFT_LIMIT = 45;
+
 /** °C either side of target that counts as "on target". */
 export const TEMP_TOL = 2;
 /** Seconds of power samples averaged for the Power column. */

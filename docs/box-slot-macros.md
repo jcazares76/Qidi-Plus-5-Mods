@@ -47,9 +47,12 @@ Nothing to enter per print – it works it out from the spools in the box:
 - Looks at every spool **physically in the box** (the heat reaches all of them, used or not).
 - Uses QIDI's own drying limit for each filament (`box_max_temp` from the printer's material database,
   e.g. ABS/ASA 45 °C, PA12-CF 65 °C).
-- Sets the box to the **lowest** of those limits. If any spool has no limit – QIDI uses 0, e.g. for PLA – the
-  heater stays **off** (QIDI's own rule: no box heating with PLA inside).
-- Replies on the console, e.g. `AUTO_BOX_TEMP box 1: slot 1 ABS Rapido max 45 C, slot 3 PLA Basic no box heating -> heater off`.
+- Sets the box to the **lowest** of those limits. A spool with no limit – QIDI uses 0, e.g. for PLA – counts as
+  **40 °C**: warm enough to keep the air in the box dry, cool enough not to soften PLA. (QIDI's own rule is no
+  box heating at all with PLA inside; this is deliberately a bit warmer.) Change it with
+  `variable_no_limit_temp` in the macro.
+- Replies on the console, e.g. `AUTO_BOX_TEMP box 1: slot 1 ABS Rapido max 45 C, slot 2 PA12-CF max 65 C, slot 3 PLA Basic no box limit, 40 C -> heating to 40 C`.
+- With no spools in the box, the heater stays off.
 - A watcher turns the box heater **off within a minute once no print is running** – after a finished, cancelled
   or failed print. (QIDI's `DISABLE_BOX_HEATER` in the end G-code does *not* switch off a heater set this way.)
 
