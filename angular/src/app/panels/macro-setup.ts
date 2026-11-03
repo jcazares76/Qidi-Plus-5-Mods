@@ -27,7 +27,7 @@ import { MoonrakerService } from '../core/moonraker.service';
           </div>
         }
         @if (inst.progress()) { <div class="msg" style="margin:4px 0">{{ inst.progress() }}</div> }
-        @if (inst.state() !== 'newer') {
+        @if (inst.busy() || inst.state() === 'missing' || inst.state() === 'outdated') {
           <div class="row">
             <button class="btn primary" [disabled]="!!blocked() || inst.busy()" [title]="blocked() || ''" (click)="run()">
               {{ inst.busy() ? 'Working…' : inst.state() === 'outdated' ? 'Update macros' : 'Set up slot editing' }}
